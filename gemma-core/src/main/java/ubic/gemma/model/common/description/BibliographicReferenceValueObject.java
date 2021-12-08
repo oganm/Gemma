@@ -1,8 +1,8 @@
 /*
  * The Gemma project
- * 
+ *
  * Copyright (c) 2007 University of British Columbia
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@
  */
 package ubic.gemma.model.common.description;
 
+import org.hibernate.Hibernate;
 import ubic.gemma.model.IdentifiableValueObject;
 import ubic.gemma.model.expression.biomaterial.Compound;
 import ubic.gemma.model.expression.experiment.ExpressionExperimentValueObject;
@@ -70,7 +71,9 @@ public class BibliographicReferenceValueObject extends IdentifiableValueObject<B
         super( ref.getId() );
         this.abstractText = ref.getAbstractText();
         this.authorList = ref.getAuthorList();
-        this.pubAccession = ref.getPubAccession().getAccession();
+        if ( ref.getPubAccession() != null && Hibernate.isInitialized( ref.getPubAccession() ) ) {
+            this.pubAccession = ref.getPubAccession().getAccession();
+        }
         this.publicationDate = ref.getPublicationDate();
         this.publisher = ref.getPublisher();
         this.pages = ref.getPages();
@@ -80,8 +83,12 @@ public class BibliographicReferenceValueObject extends IdentifiableValueObject<B
         this.volume = ref.getVolume();
         this.citation = constructCitation( ref );
 
-        this.meshTerms = extractTermsFromHeadings( ref.getMeshTerms() );
-        this.chemicalsTerms = extractChemFromHeadings( ref.getChemicals() );
+        if ( Hibernate.isInitialized( ref.getMeshTerms() ) ) {
+            this.meshTerms = extractTermsFromHeadings( ref.getMeshTerms() );
+        }
+        if ( Hibernate.isInitialized( ref.getChemicals() ) ) {
+            this.chemicalsTerms = extractChemFromHeadings( ref.getChemicals() );
+        }
         this.retracted = ref.getRetracted();
     }
 

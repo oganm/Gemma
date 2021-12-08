@@ -68,6 +68,18 @@ public class GeneSetServiceImpl implements GeneSetService {
     @Autowired
     private TaxonService taxonService;
 
+    @Override
+    @Transactional(readOnly = true)
+    public GeneSet find( GeneSet entity ) {
+        return geneSetDao.find( entity );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GeneSet findOrCreate( GeneSet entity ) {
+        return geneSetDao.findOrCreate( entity );
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     @Transactional
@@ -141,6 +153,12 @@ public class GeneSetServiceImpl implements GeneSetService {
 
     @Override
     @Transactional(readOnly = true)
+    public int countAll() {
+        return geneSetDao.countAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Collection<GeneSet> loadAll( Taxon tax ) {
         return this.geneSetDao.loadAll( tax );
     }
@@ -181,6 +199,12 @@ public class GeneSetServiceImpl implements GeneSetService {
 
     @Override
     @Transactional
+    public void remove( Long id ) {
+        geneSetDao.remove( id );
+    }
+
+    @Override
+    @Transactional
     public void remove( GeneSet geneset ) {
         this.geneSetDao.remove( geneset );
     }
@@ -198,7 +222,7 @@ public class GeneSetServiceImpl implements GeneSetService {
         this.geneSetDao.update( geneset );
 
     }
-    
+
 //    @Override
 //    @Transactional
 //    public void addGene(GeneSet geneset, Gene gene) {
@@ -575,7 +599,7 @@ public class GeneSetServiceImpl implements GeneSetService {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see ubic.gemma.core.genome.gene.service.GeneSetService#thaw(ubic.gemma.model.genome.gene.GeneSet)
      */
     @Override

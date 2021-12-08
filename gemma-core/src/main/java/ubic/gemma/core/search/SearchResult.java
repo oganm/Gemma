@@ -18,32 +18,32 @@
  */
 package ubic.gemma.core.search;
 
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import ubic.gemma.model.common.Identifiable;
-import ubic.gemma.persistence.util.EntityUtils;
-import ubic.gemma.persistence.util.ReflectionUtil;
+
+import java.util.Objects;
 
 /**
  * @author paul
  */
+@EqualsAndHashCode(of = { "resultClass", "resultId", "resultObject" })
 public class SearchResult<T extends Identifiable> implements Comparable<SearchResult<? extends Identifiable>> {
 
     private final Class<? extends Identifiable> resultClass;
 
-    private Long resultId;
+    private final Long resultId;
+
+    private T resultObject;
+
+    private double score = 0.0;
 
     private String highlightedText;
 
-    private Double score = 0.0;
-
-    private T resultObject; // can be null, at least initially, if the resultClass and objectId are provided.
-
     public SearchResult( @NonNull T resultObject ) {
-        if ( resultObject == null )
-            throw new IllegalArgumentException( "Search result cannot be null" );
+        this.resultClass = resultObject.getClass();
         this.resultId = resultObject.getId();
-        this.resultObject = resultObject; // FIXME: maybe this is a bad idea. Eventually we would only want value objects.
-        this.resultClass = ( Class<? extends Identifiable> ) ReflectionUtil.getBaseForImpl( resultObject.getClass() );
+        this.resultObject = resultObject;
     }
 
     public SearchResult( @NonNull T searchResult, double score ) {
@@ -51,27 +51,33 @@ public class SearchResult<T extends Identifiable> implements Comparable<SearchRe
         this.score = score;
     }
 
-    public SearchResult( @NonNull T searchResult, double score, String matchingText ) {
-        this( searchResult );
-        this.score = score;
-        this.highlightedText = matchingText;
+    public SearchResult( @NonNull T searchResult, double score, String highlightedText ) {
+        this( searchResult, score );
+        this.highlightedText = highlightedText;
     }
 
-    public SearchResult( @NonNull Class<? extends Identifiable> entityClass, @NonNull Long entityId, double score, String matchingText ) {
-        this.resultClass = entityClass;
+    /**
+     * This constructor allows you to create an uninitialized search result. It must however have a result type and
+     * identifier.
+     */
+    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull Long entityId, double score, String highlightedText ) {
+        this.resultClass = resultClass;
         this.resultId = entityId;
         this.score = score;
-        this.highlightedText = matchingText;
+        this.highlightedText = highlightedText;
     }
 
-    public SearchResult( @NonNull Class<? extends Identifiable> entityClass, @NonNull T entity, double score, String matchingText ) {
-        this( entityClass, entity.getId(), score, matchingText );
+    /**
+     * This constructor allows you to create a transformed search result that preserves the original entity class.
+     */
+    public SearchResult( @NonNull Class<? extends Identifiable> entityClass, @NonNull T entity, double score, String highlightedText ) {
+        this( entityClass, entity.getId(), score, highlightedText );
         this.resultObject = entity;
     }
 
     @Override
     public int compareTo( SearchResult<?> o ) {
-        return -this.score.compareTo( o.getScore() );
+        return -Double.compare( this.score, o.score );
     }
 
     public String getHighlightedText() {
@@ -83,68 +89,46 @@ public class SearchResult<T extends Identifiable> implements Comparable<SearchRe
     }
 
     /**
+     * Obtain the result identifier.
      * @return the id for the underlying result entity.
      */
     public Long getResultId() {
         return resultId;
     }
 
-    public void setResultId( Long resultId ) {
-        this.resultId = resultId;
-    }
-
+    /**
+     * Obtain the result type.
+     *
+     * This type might differ from the type of {@link #getResultObject()} if the result is uninitialized or has been
+     * transformed. This is typically the case when we convert the result to an {@link ubic.gemma.model.IdentifiableValueObject}.
+     */
     public Class<? extends Identifiable> getResultClass() {
         return resultClass;
     }
 
+    /**
+     * This can be null, at least initially, if the {@link #getResultClass()} and {@link #getResultId()} are provided.
+     */
     public T getResultObject() {
         return this.resultObject;
     }
 
     /**
-     * @param resultObject if null, the resultObject is reset to null, but the class and id information will not be
-     *                     overwritten.
+     * Set the result object this search result is referring to.
      */
-    public void setResultObject( T resultObject ) {
+    public void setResultObject( @NonNull T resultObject ) {
+        if ( !Objects.equals( resultObject.getId(), resultId ) ) {
+            throw new IllegalArgumentException( "The result object " + resultObject + " ID does not match this result." );
+        }
         this.resultObject = resultObject;
-        this.resultId = resultObject != null ? EntityUtils.getId( resultObject ) : null;
     }
 
-    public Double getScore() {
+    public double getScore() {
         return score;
     }
 
-    public void setScore( Double score ) {
+    public void setScore( double score ) {
         this.score = score;
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( resultId == null ) ? 0 : resultId.hashCode() );
-        result = prime * result + ( ( resultClass == null ) ? 0 : resultClass.getName().hashCode() );
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj )
-            return true;
-        if ( obj == null )
-            return false;
-        if ( this.getClass() != obj.getClass() )
-            return false;
-        final SearchResult<T> other = ( SearchResult<T> ) obj;
-        if ( resultId == null ) {
-            if ( other.resultId != null )
-                return false;
-        } else if ( !resultId.equals( other.resultId ) )
-            return false;
-        if ( resultClass == null ) {
-            return other.resultClass == null;
-        }
-        return resultClass.getName().equals( other.resultClass.getName() );
     }
 
     @Override

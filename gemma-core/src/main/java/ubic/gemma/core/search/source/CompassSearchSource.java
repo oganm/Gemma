@@ -14,6 +14,9 @@ import org.compass.core.spi.InternalCompassSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import ubic.gemma.core.annotation.reference.BibliographicReferenceService;
+import ubic.gemma.core.genome.gene.service.GeneService;
+import ubic.gemma.core.genome.gene.service.GeneSetService;
 import ubic.gemma.core.search.SearchResult;
 import ubic.gemma.core.search.SearchSource;
 import ubic.gemma.model.analysis.expression.ExpressionExperimentSet;
@@ -28,7 +31,11 @@ import ubic.gemma.model.genome.Taxon;
 import ubic.gemma.model.genome.biosequence.BioSequence;
 import ubic.gemma.model.genome.gene.GeneSet;
 import ubic.gemma.model.genome.gene.phenotype.valueObject.CharacteristicValueObject;
+import ubic.gemma.persistence.service.BaseService;
+import ubic.gemma.persistence.service.expression.arrayDesign.ArrayDesignService;
+import ubic.gemma.persistence.service.expression.designElement.CompositeSequenceService;
 import ubic.gemma.persistence.service.expression.experiment.ExpressionExperimentService;
+import ubic.gemma.persistence.service.expression.experiment.ExpressionExperimentSetService;
 import ubic.gemma.persistence.service.genome.biosequence.BioSequenceService;
 import ubic.gemma.persistence.util.EntityUtils;
 
@@ -97,33 +104,40 @@ public class CompassSearchSource implements SearchSource {
     private Compass compassProbe;
 
     @Autowired
+    private ArrayDesignService arrayDesignService;
+    @Autowired
+    private BibliographicReferenceService bibliographicReferenceService;
+    @Autowired
     private BioSequenceService bioSequenceService;
     @Autowired
+    private CompositeSequenceService compositeSequenceService;
+    @Autowired
     private ExpressionExperimentService expressionExperimentService;
+    @Autowired
+    private ExpressionExperimentSetService expressionExperimentSetService;
+    @Autowired
+    private GeneService geneService;
+    @Autowired
+    private GeneSetService geneSetService;
 
-    /**
-     * A Compass search on array designs.
-     *
-     * @return {@link Collection}
-     */
     @Override
     public Collection<SearchResult<ArrayDesign>> searchArrayDesign( SearchSettings settings ) {
-        return this.compassSearch( compassArray, settings, ArrayDesign.class );
+        return this.compassSearch( compassArray, settings, ArrayDesign.class, arrayDesignService );
     }
 
     @Override
     public Collection<SearchResult<BibliographicReference>> searchBibliographicReference( SearchSettings settings ) {
-        return this.compassSearch( compassBibliographic, settings, BibliographicReference.class );
+        return this.compassSearch( compassBibliographic, settings, BibliographicReference.class, bibliographicReferenceService );
     }
 
     @Override
     public Collection<SearchResult<ExpressionExperimentSet>> searchExperimentSet( SearchSettings settings ) {
-        return this.compassSearch( compassExperimentSet, settings, ExpressionExperimentSet.class );
+        return this.compassSearch( compassExperimentSet, settings, ExpressionExperimentSet.class, expressionExperimentSetService );
     }
 
     @Override
     public Collection<SearchResult<BioSequence>> searchBioSequence( SearchSettings settings ) {
-        return this.compassSearch( compassBiosequence, settings, BioSequence.class );
+        return this.compassSearch( compassBiosequence, settings, BioSequence.class, bioSequenceService );
     }
 
     /**
@@ -136,7 +150,7 @@ public class CompassSearchSource implements SearchSource {
     @Override
     public Collection<SearchResult> searchBioSequenceAndGene( SearchSettings settings,
             Collection<SearchResult<Gene>> previousGeneSearchResults ) {
-        Collection<SearchResult> results = new HashSet<>( this.compassSearch( compassBiosequence, settings, BioSequence.class ) );
+        Collection<SearchResult> results = new HashSet<>( this.compassSearch( compassBiosequence, settings, BioSequence.class, bioSequenceService ) );
 
         // FIXME: incorporate the genes in the biosequence results (breaks generics)
         Collection<SearchResult<Gene>> geneResults;
@@ -165,7 +179,7 @@ public class CompassSearchSource implements SearchSource {
 
     @Override
     public Collection<SearchResult<CompositeSequence>> searchCompositeSequence( SearchSettings settings ) {
-        return this.compassSearch( compassProbe, settings, CompositeSequence.class );
+        return this.compassSearch( compassProbe, settings, CompositeSequence.class, compositeSequenceService );
     }
 
     @Override
@@ -183,18 +197,18 @@ public class CompassSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<ExpressionExperiment>> searchExpressionExperiment( SearchSettings settings ) {
-        Collection<SearchResult<ExpressionExperiment>> unfilteredResults = this.compassSearch( compassExpression, settings, ExpressionExperiment.class );
+        Collection<SearchResult<ExpressionExperiment>> unfilteredResults = this.compassSearch( compassExpression, settings, ExpressionExperiment.class, expressionExperimentService );
         return filterExperimentHitsByTaxon( unfilteredResults, settings.getTaxon() );
     }
 
     @Override
     public Collection<SearchResult<Gene>> searchGene( final SearchSettings settings ) {
-        return this.compassSearch( compassGene, settings, Gene.class );
+        return this.compassSearch( compassGene, settings, Gene.class, geneService );
     }
 
     @Override
     public Collection<SearchResult<GeneSet>> searchGeneSet( SearchSettings settings ) {
-        return this.compassSearch( compassGeneSet, settings, GeneSet.class );
+        return this.compassSearch( compassGeneSet, settings, GeneSet.class, geneSetService );
     }
 
     @Override
@@ -205,13 +219,13 @@ public class CompassSearchSource implements SearchSource {
     /**
      * Generic method for searching Lucene indices for entities (excluding ontology terms, which use the OntologySearch)
      */
-    private <T extends Identifiable> Set<SearchResult<T>> compassSearch( Compass bean, final SearchSettings settings, Class<T> clazz ) {
+    private <T extends Identifiable> Set<SearchResult<T>> compassSearch( Compass bean, final SearchSettings settings, Class<T> clazz, BaseService<T> service ) {
 
-        if ( !settings.getUseIndices() )
+        if ( !settings.isUseIndices() )
             return new HashSet<>();
 
         CompassTemplate template = new CompassTemplate( bean );
-        Set<SearchResult<T>> searchResults = template.execute( session -> CompassSearchSource.this.performSearch( settings, session, clazz ) );
+        Set<SearchResult<T>> searchResults = template.execute( session -> CompassSearchSource.this.performSearch( settings, session, clazz, service ) );
         if ( CompassSearchSource.log.isDebugEnabled() ) {
             CompassSearchSource.log
                     .debug( "Compass search via " + bean.getSettings().getSetting( "compass.name" ) + " : " + settings
@@ -223,7 +237,7 @@ public class CompassSearchSource implements SearchSource {
     /**
      * Runs inside Compass transaction
      */
-    private <T extends Identifiable> Set<SearchResult<T>> performSearch( SearchSettings settings, CompassSession session, Class<T> clazz ) {
+    private <T extends Identifiable> Set<SearchResult<T>> performSearch( SearchSettings settings, CompassSession session, Class<T> clazz, BaseService<T> service ) {
         StopWatch watch = new StopWatch();
         watch.start();
         String enhancedQuery = settings.getQuery().trim();
@@ -263,7 +277,7 @@ public class CompassSearchSource implements SearchSource {
                             + " took " + watch.getTime() + " ms" );
         }
 
-        return this.getSearchResults( hits, clazz );
+        return this.getSearchResults( hits, clazz, service, settings.isFillObjects() );
     }
 
     /**
@@ -301,7 +315,7 @@ public class CompassSearchSource implements SearchSource {
      * @param  hits CompassHits object
      * @return collection of SearchResult. These *do not* contain the actual entities, just their IDs and class.
      */
-    private <T extends Identifiable> Set<SearchResult<T>> getSearchResults( CompassHits hits, Class<T> hitsClass ) {
+    private <T extends Identifiable> Set<SearchResult<T>> getSearchResults( CompassHits hits, Class<T> hitsClass, BaseService<T> service, boolean fillObjects ) {
         StopWatch timer = new StopWatch();
         timer.start();
         Set<SearchResult<T>> results = new HashSet<>();
@@ -332,9 +346,18 @@ public class CompassSearchSource implements SearchSource {
              */
             r.setScore( score * CompassSearchSource.COMPASS_HIT_SCORE_PENALTY_FACTOR );
 
-            this.getHighlightedText( hits, i, r );
+            CompassHighlightedText highlightedText = hits.highlightedText( i );
+            if ( highlightedText != null && highlightedText.getHighlightedText() != null ) {
+                r.setHighlightedText( highlightedText.getHighlightedText() );
+            } else {
+                r.setHighlightedText( HIGHLIGHT_TEXT_NOT_AVAILABLE_MESSAGE );
+            }
 
             results.add( r );
+        }
+
+        if ( fillObjects ) {
+            fillSearchResults( results, service );
         }
 
         if ( timer.getTime() > 100 ) {
@@ -354,12 +377,22 @@ public class CompassSearchSource implements SearchSource {
         return results;
     }
 
-    private void getHighlightedText( CompassHits hits, int i, SearchResult r ) {
-        CompassHighlightedText highlightedText = hits.highlightedText( i );
-        if ( highlightedText != null && highlightedText.getHighlightedText() != null ) {
-            r.setHighlightedText( highlightedText.getHighlightedText() );
-        } else {
-            r.setHighlightedText( HIGHLIGHT_TEXT_NOT_AVAILABLE_MESSAGE );
+    private <T extends Identifiable> void fillSearchResults( Collection<SearchResult<T>> results, BaseService<T> service ) {
+        // load results from the database since Compass only stores indexed attributes
+        List<Long> resultObjectIds = results.stream()
+                .map( SearchResult::getResultObject )
+                .map( Identifiable::getId )
+                .sorted().distinct() // for cache consistency
+                .collect( Collectors.toList() );
+
+        Collection<T> resultObjects = service.load( resultObjectIds );
+        Map<Long, T> resultObjectsById = EntityUtils.getIdMap( resultObjects );
+
+        // replace search results objects by loaded ones
+        for ( SearchResult<T> result : results ) {
+            if ( resultObjectsById.containsKey( result.getResultId() ) ) {
+                result.setResultObject( resultObjectsById.get( result.getResultId() ) );
+            }
         }
     }
 

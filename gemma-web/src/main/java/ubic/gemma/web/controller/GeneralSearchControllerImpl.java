@@ -36,6 +36,7 @@ import ubic.gemma.core.genome.gene.service.GeneSetService;
 import ubic.gemma.core.search.SearchResult;
 import ubic.gemma.core.search.SearchService;
 import ubic.gemma.core.security.audit.AuditableUtil;
+import ubic.gemma.model.IdentifiableValueObject;
 import ubic.gemma.model.analysis.expression.ExpressionExperimentSet;
 import ubic.gemma.model.association.phenotype.PhenotypeAssociation;
 import ubic.gemma.model.common.Identifiable;
@@ -82,26 +83,10 @@ public class GeneralSearchControllerImpl extends BaseFormController implements G
     @Autowired
     private SearchService searchService;
     @Autowired
-    private ExpressionExperimentService expressionExperimentService;
-    @Autowired
-    private ArrayDesignService arrayDesignService;
-    @Autowired
-    private GeneService geneService;
-    @Autowired
-    private BibliographicReferenceService bibliographicReferenceService;
-    @Autowired
     private TaxonService taxonService;
-    @Autowired
-    private AuditableUtil auditableUtil;
-    @Autowired
-    private GeneSetService geneSetService;
-    @Autowired
-    private ExpressionExperimentSetService experimentSetService;
-    @Autowired
-    private CompositeSequenceService compositeSequenceService;
 
     @Override
-    public JsonReaderResponse<SearchResult> ajaxSearch( SearchSettingsValueObject settingsValueObject ) {
+    public JsonReaderResponse<SearchResult<? extends IdentifiableValueObject>> ajaxSearch( SearchSettingsValueObject settingsValueObject ) {
         StopWatch timer = new StopWatch();
         StopWatch searchTimer = new StopWatch();
         StopWatch fillVosTimer = new StopWatch();
@@ -125,10 +110,10 @@ public class GeneralSearchControllerImpl extends BaseFormController implements G
 
         // FIXME: sort by the number of hits per class, so the smallest number of hits is at the top.
         fillVosTimer.start();
-        List<SearchResult> finalResults = new ArrayList<>();
+        List<SearchResult<? extends IdentifiableValueObject>> finalResults = new ArrayList<>();
         if ( searchResults != null ) {
             for ( Class<?> clazz : searchResults.keySet() ) {
-                List<SearchResult<?>> results = searchResults.get( clazz );
+                List<SearchResult<? extends Identifiable>> results = searchResults.get( clazz );
 
                 if ( results.size() == 0 )
                     continue;
@@ -142,8 +127,8 @@ public class GeneralSearchControllerImpl extends BaseFormController implements G
                  * Now put the valueObjects inside the SearchResults in score order.
                  */
                 results = results.stream().sorted().collect( Collectors.toList() );
-                this.fillValueObjects( clazz, results, searchSettings );
-                finalResults.addAll( results );
+
+                finalResults.addAll( searchService.loadValueObjects( results ) );
             }
         }
         fillVosTimer.stop();
@@ -280,122 +265,6 @@ public class GeneralSearchControllerImpl extends BaseFormController implements G
         this.populateTaxonReferenceData( mapping );
 
         return mapping;
-    }
-
-    /**
-     * Populate the search results with the value objects - we generally only have the entity class and ID (or, in some
-     * cases, possibly the entity)
-     * @param entityClass
-     * @param results
-     * @param settings
-     */
-    @SuppressWarnings("unchecked")
-    private void fillValueObjects( Class<?> entityClass, List<SearchResult<?>> results, SearchSettings settings ) {
-        StopWatch timer = StopWatch.createStarted();
-        Collection<? extends Identifiable> vos;
-
-        Collection<Long> ids = new ArrayList<>();
-        for ( SearchResult r : results ) {
-            ids.add( r.getResultId() );
-        }
-
-        if ( ExpressionExperiment.class.isAssignableFrom( entityClass ) ) {
-            vos = expressionExperimentService.loadValueObjectsByIds( ids );
-            if ( !SecurityUtil.isUserAdmin() ) {
-                auditableUtil.removeTroubledEes( ( Collection<ExpressionExperimentValueObject> ) vos );
-            }
-
-        } else if ( ArrayDesign.class.isAssignableFrom( entityClass ) ) {
-            vos = this.filterAD( arrayDesignService.loadValueObjectsByIds( ids ), settings );
-
-            if ( !SecurityUtil.isUserAdmin() ) {
-                auditableUtil.removeTroubledArrayDesigns( ( Collection<ArrayDesignValueObject> ) vos );
-            }
-        } else if ( CompositeSequence.class.isAssignableFrom( entityClass ) ) {
-            Collection<CompositeSequence> compositeSequences = results.stream().map( SearchResult::getResultObject )
-                    .map( o -> ( CompositeSequence ) o )
-                    .collect( Collectors.toSet() );
-            vos = compositeSequenceService
-                    .loadValueObjectsWithoutGeneMappingSummary( compositeSequences );
-        } else if ( BibliographicReference.class.isAssignableFrom( entityClass ) ) {
-            Collection<BibliographicReference> bss = bibliographicReferenceService
-                    .load( ids );
-            bss = bibliographicReferenceService.thaw( bss );
-            vos = bibliographicReferenceService.loadValueObjects( bss );
-        } else if ( Gene.class.isAssignableFrom( entityClass ) ) {
-            Collection<Gene> genes = geneService.load( ids );
-            genes = geneService.thawLite( genes );
-            vos = geneService.loadValueObjects( genes );
-        } else if ( CharacteristicValueObject.class.isAssignableFrom( entityClass ) ) {
-            // This is used for phenotypes.
-            Collection<CharacteristicValueObject> cvos = new ArrayList<>();
-            for ( SearchResult sr : results ) {
-                CharacteristicValueObject ch = ( CharacteristicValueObject ) sr.getResultObject();
-                cvos.add( ch );
-            }
-            vos = cvos;
-        } else if ( BioSequenceValueObject.class.isAssignableFrom( entityClass ) ) {
-            return; // why?
-        } else if ( GeneSet.class.isAssignableFrom( entityClass ) ) {
-            vos = geneSetService.getValueObjects( ids );
-        } else if ( ExpressionExperimentSet.class.isAssignableFrom( entityClass ) ) {
-            vos = experimentSetService.loadValueObjects( experimentSetService.load( ids ) );
-        } else if ( BlacklistedEntity.class.isAssignableFrom( entityClass ) ) {
-            Collection<BlacklistedValueObject> bvos = new ArrayList<>();
-            for ( SearchResult sr : results ) {
-                bvos.add( BlacklistedValueObject.fromEntity( ( BlacklistedEntity ) sr.getResultObject() ) );
-            }
-            vos = bvos;
-        } else {
-            throw new UnsupportedOperationException( "Don't know how to make value objects for class=" + entityClass );
-        }
-
-        if ( vos == null || vos.isEmpty() ) {
-
-            // bug 3475: if there are search results but they are all removed because they are troubled, then results
-            // has ExpressionExperiments in
-            // it causing front end errors, if vos is empty make sure to get rid of all search results
-            for ( Iterator<SearchResult<?>> it = results.iterator(); it.hasNext(); ) {
-                it.next();
-                it.remove();
-            }
-
-            return;
-        }
-
-        // retained objects...
-        Map<Long, Identifiable> idMap = EntityUtils.getIdMap( vos );
-
-        for ( Iterator<SearchResult<?>> it = results.iterator(); it.hasNext(); ) {
-            SearchResult sr = it.next();
-            if ( !idMap.containsKey( sr.getResultId() ) ) {
-                it.remove();
-                continue;
-            }
-            sr.setResultObject( idMap.get( sr.getResultId() ) );
-        }
-
-        timer.stop();
-
-        if ( timer.getTime() > 200 ) {
-            BaseFormController.log.info( "Value object conversion for " + ids.size() + " " + entityClass + " after search took " + timer.getTime() + " ms." );
-        }
-    }
-
-    private Collection<ArrayDesignValueObject> filterAD( final Collection<ArrayDesignValueObject> toFilter,
-            SearchSettings settings ) {
-        // Note: if possible we should move filtering into the search service (as is done for EEs) (this is not a big deal)
-        Taxon tax = settings.getTaxon();
-        if ( tax == null )
-            return toFilter;
-        Collection<ArrayDesignValueObject> filtered = new HashSet<>();
-        for ( ArrayDesignValueObject aavo : toFilter ) {
-            if ( ( aavo.getTaxon() == null ) || ( aavo.getTaxon().equalsIgnoreCase( tax.getCommonName() ) ) ) {
-                filtered.add( aavo );
-            }
-        }
-
-        return filtered;
     }
 
     //    private Collection<ExpressionExperimentValueObject> filterEE(

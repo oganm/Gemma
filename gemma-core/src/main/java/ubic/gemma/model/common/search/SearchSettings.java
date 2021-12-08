@@ -140,25 +140,61 @@ public class SearchSettings implements Serializable {
     private Set<Class<? extends Identifiable>> resultTypes;
 
     /* optional search constraints */
+    /**
+     * Only results related to this platform will be retrieved, if applicable and non-null.
+     */
     private ArrayDesign platformConstraint;
+    /**
+     * Only results related to this taxon will be retrieved, if applicable and non-null.
+     */
     private Taxon taxon;
 
     /* sources */
+    /**
+     * Whether to use characteristics, which are ontology terms.
+     */
     @Builder.Default
-    private Boolean useCharacteristics = Boolean.TRUE;
+    private boolean useCharacteristics = true;
+    /**
+     * Whether to use the database.
+     */
     @Builder.Default
-    private Boolean useDatabase = Boolean.TRUE;
+    private boolean useDatabase = true;
+    /**
+     * Whether to use GO ontology terms.
+     */
     @Builder.Default
-    private Boolean useGo = Boolean.TRUE;
+    private boolean useGo = true;
+    /**
+     * Whether to use search indices (i.e. Compass).
+     */
     @Builder.Default
-    private Boolean useIndices = Boolean.TRUE;
+    private boolean useIndices = true;
+
+    /**
+     * Whether to fill {@link SearchResult#getResultObject()}.
+     *
+     * In practice, this only really affects {@link ubic.gemma.core.search.source.CompassSearchSource} because the
+     * database-driven search will generally load the model regardless of this setting.
+     */
+    @Builder.Default
+    private boolean fillObjects = true;
+
+    /**
+     * Perform a quick search.
+     *
+     * This is used only once for quickly returning gene results.
+     */
+    @Builder.Default
+    private boolean quickSearch = false;
 
     /**
      * Highlight part of the search result as per {@link SearchResult#getHighlightedText()}.
      *
      * Overhead can be reduced by disabling highlighting if not needed.
      */
-    private boolean doHighlighting;
+    @Builder.Default
+    private boolean doHighlighting = false;
 
     @Builder.Default
     private Integer maxResults = SearchSettings.DEFAULT_MAX_RESULTS_PER_RESULT_TYPE;

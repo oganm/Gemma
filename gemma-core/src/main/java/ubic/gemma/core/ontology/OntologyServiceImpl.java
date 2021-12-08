@@ -1003,8 +1003,9 @@ public class OntologyServiceImpl implements OntologyService {
                 .query( queryString )
                 .taxon( taxon )
                 .resultType( Gene.class )
+                .fillObjects( false )
                 .build();
-        Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> geneResults = this.searchService.search( ss, false, false );
+        Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> geneResults = this.searchService.search( ss );
 
         if ( geneResults.containsKey( Gene.class ) ) {
             for ( SearchResult<?> sr : geneResults.get( Gene.class ) ) {

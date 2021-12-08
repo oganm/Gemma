@@ -204,9 +204,10 @@ public class AnnotationsWebService {
         for ( String value : values ) {
             Set<Long> valueIds = new HashSet<>();
 
-            SearchSettings settings = SearchSettings.expressionExperimentSearch( value );
+            SearchSettings settings = SearchSettings.expressionExperimentSearch( value )
+                    .withFillObjects( false );
 
-            Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> results = searchService.search( settings, false, false );
+            Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> results = searchService.search( settings );
             List<SearchResult<?>> eeResults = results.get( ExpressionExperiment.class );
 
             if ( eeResults == null ) {

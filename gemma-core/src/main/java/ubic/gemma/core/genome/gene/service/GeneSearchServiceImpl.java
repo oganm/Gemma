@@ -166,13 +166,14 @@ public class GeneSearchServiceImpl implements GeneSearchService {
                 .query( query )
                 .resultType( Gene.class )
                 .resultType( GeneSet.class )
+                .quickSearch( true )
                 .maxResults( maxGeneralSearchResults )
                 .taxon( taxon ) // FIXME: this doesn't work yet
                 .build();
 
         GeneSearchServiceImpl.log.debug( "getting results from searchService for " + query );
 
-        Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> results = searchService.speedSearch( settings );
+        Map<Class<? extends Identifiable>, List<SearchResult<? extends Identifiable>>> results = searchService.search( settings );
 
         List<SearchResult> geneSetSearchResults = new ArrayList<>();
         List<SearchResult> geneSearchResults = new ArrayList<>();
@@ -357,10 +358,9 @@ public class GeneSearchServiceImpl implements GeneSearchService {
             }
 
             // searching one gene at a time is a bit slow; we do a quick search for symbols.
-            SearchSettings settings = SearchSettings.geneSearch( line, taxon );
-            List<SearchResult<Gene>> geneSearchResults = searchService.speedSearch( settings ).get( Gene.class ).stream()
-                    .map( r -> ( SearchResult<Gene> ) r )
-                    .collect( Collectors.toList() );
+            SearchSettings settings = SearchSettings.geneSearch( line, taxon )
+                    .withQuickSearch( true );
+            List<SearchResult<Gene>> geneSearchResults = searchService.search( settings, Gene.class );
 
             if ( geneSearchResults.isEmpty() ) {
                 // an empty set is an indication of no results.

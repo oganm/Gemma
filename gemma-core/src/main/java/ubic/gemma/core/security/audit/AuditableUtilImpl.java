@@ -1,8 +1,8 @@
 /*
  * The Gemma project
- * 
+ *
  * Copyright (c) 2007 University of British Columbia
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,37 +19,26 @@
 package ubic.gemma.core.security.audit;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.Predicate;
 import org.springframework.stereotype.Component;
-import ubic.gemma.model.expression.arrayDesign.ArrayDesignValueObject;
-import ubic.gemma.model.expression.experiment.ExpressionExperimentValueObject;
+import ubic.gemma.model.common.auditAndSecurity.curation.AbstractCuratableValueObject;
+import ubic.gemma.model.common.auditAndSecurity.curation.Curatable;
 
 import java.util.Collection;
 
-/**
- * A few utility methods to filter collections
- *
- * @author paul
- */
 @Component
 public class AuditableUtilImpl implements AuditableUtil {
 
     @Override
-    public void removeTroubledArrayDesigns( Collection<ArrayDesignValueObject> valueObjects ) {
-        if ( valueObjects == null || valueObjects.size() == 0 ) {
-            return;
-        }
-
-        CollectionUtils.filter( valueObjects, vo -> !vo.getTroubled() );
+    public void removeTroubledCuratableEntities( Collection<? extends Curatable> entities ) {
+        CollectionUtils.filter( entities, o -> !o.getCurationDetails().getTroubled() );
     }
 
     @Override
-    public void removeTroubledEes( Collection<ExpressionExperimentValueObject> eevos ) {
-        if ( eevos == null || eevos.size() == 0 ) {
+    public void removeTroubledCuratableValueObjects( Collection<? extends AbstractCuratableValueObject<? extends Curatable>> valueObjects ) {
+        if ( valueObjects == null || valueObjects.size() == 0 ) {
             return;
         }
-
-        CollectionUtils.filter( eevos, vo -> !vo.getTroubled() );
+        CollectionUtils.filter( valueObjects, vo -> !vo.getTroubled() );
     }
 
 }

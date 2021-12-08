@@ -3,9 +3,9 @@ package ubic.gemma.core.search.source;
 import gemma.gsec.util.SecurityUtil;
 import lombok.extern.apachecommons.CommonsLog;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import ubic.gemma.core.association.phenotype.PhenotypeAssociationManagerService;
@@ -13,6 +13,7 @@ import ubic.gemma.core.genome.gene.service.GeneService;
 import ubic.gemma.core.genome.gene.service.GeneSetService;
 import ubic.gemma.core.search.SearchResult;
 import ubic.gemma.core.search.SearchSource;
+import ubic.gemma.core.security.audit.AuditableUtil;
 import ubic.gemma.model.analysis.expression.ExpressionExperimentSet;
 import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.common.description.BibliographicReference;
@@ -65,6 +66,8 @@ public class DatabaseSearchSource implements SearchSource {
     private PhenotypeAssociationManagerService phenotypeAssociationManagerService;
     @Autowired
     private TaxonService taxonService;
+    @Autowired
+    private AuditableUtil auditableUtil;
 
     /**
      * Searches the DB for array designs which have composite sequences whose names match the given search string.
@@ -73,7 +76,7 @@ public class DatabaseSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<ArrayDesign>> searchArrayDesign( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
 
         StopWatch watch = StopWatch.createStarted();
@@ -84,6 +87,10 @@ public class DatabaseSearchSource implements SearchSource {
         Collection<CompositeSequence> matchedCs = compositeSequenceService.findByName( settings.getQuery() );
         for ( CompositeSequence sequence : matchedCs ) {
             adSet.add( sequence.getArrayDesign() );
+        }
+
+        if ( !SecurityUtil.isUserAdmin() ) {
+            auditableUtil.removeTroubledCuratableEntities( adSet );
         }
 
         watch.stop();
@@ -110,7 +117,7 @@ public class DatabaseSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<BioSequence>> searchBioSequence( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
 
         StopWatch watch = StopWatch.createStarted();
@@ -162,7 +169,7 @@ public class DatabaseSearchSource implements SearchSource {
     }
 
     private Collection<CompositeSequence> searchCompositeSequenceAndPopulateGenes( SearchSettings settings, Set<Gene> geneSet ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
 
         StopWatch watch = StopWatch.createStarted();
@@ -234,7 +241,7 @@ public class DatabaseSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<ExpressionExperiment>> searchExpressionExperiment( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
 
         StopWatch watch = StopWatch.createStarted();
@@ -287,6 +294,10 @@ public class DatabaseSearchSource implements SearchSource {
 
         }
 
+        if ( !SecurityUtil.isUserAdmin() ) {
+            auditableUtil.removeTroubledCuratableEntities( results.keySet() );
+        }
+
         watch.stop();
         if ( watch.getTime() > 1000 )
             DatabaseSearchSource.log.info( "DB Expression Experiment search for " + settings + " took " + watch.getTime()
@@ -301,7 +312,7 @@ public class DatabaseSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<Gene>> searchGene( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
 
         StopWatch watch = StopWatch.createStarted();
@@ -401,7 +412,7 @@ public class DatabaseSearchSource implements SearchSource {
 
     @Override
     public Collection<SearchResult<GeneSet>> searchGeneSet( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
         throw new NotImplementedException( "Searching by gene set from the database is not supported." );
     }
@@ -411,7 +422,7 @@ public class DatabaseSearchSource implements SearchSource {
      */
     @Override
     public Collection<SearchResult<CharacteristicValueObject>> searchPhenotype( SearchSettings settings ) {
-        if ( !settings.getUseDatabase() )
+        if ( !settings.isUseDatabase() )
             return new HashSet<>();
         return this.dbHitsToSearchResult(
                 this.phenotypeAssociationManagerService.searchInDatabaseForPhenotype( settings.getQuery() ) );

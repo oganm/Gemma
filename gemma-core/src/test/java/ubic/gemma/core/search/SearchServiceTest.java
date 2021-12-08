@@ -44,10 +44,8 @@ import ubic.gemma.persistence.service.common.description.CharacteristicService;
 import ubic.gemma.persistence.service.expression.experiment.ExpressionExperimentService;
 
 import java.io.InputStream;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
@@ -358,7 +356,9 @@ public class SearchServiceTest extends BaseSpringContextTest {
                 .query( SearchServiceTest.SPINAL_CORD )
                 .resultType( ExpressionExperiment.class )
                 .build();
-        List<SearchResult<ExpressionExperiment>> results = searchService.search( settings, ExpressionExperiment.class );
+        // FIXME: this has to be re-wrapped because loadValueObjects can work on collections of mixed result types, it
+        //        would be nice however not to have to do that
+        List<SearchResult<? extends Identifiable>> results = new ArrayList<>( searchService.search( settings, ExpressionExperiment.class ) );
         assertThat( results ).hasSize( 1 );
         List<SearchResult<? extends IdentifiableValueObject<? extends Identifiable>>> resultVo = searchService.loadValueObjects( results );
         // ensure that the resultType is preserved

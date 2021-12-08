@@ -128,7 +128,7 @@ public class ArrayDesignControllerImpl implements ArrayDesignController {
         Collection<ArrayDesignValueObject> valueObjects = getArrayDesigns( ids, showMerged, showOrphans );
 
         if ( !SecurityUtil.isUserAdmin() ) {
-            auditableUtil.removeTroubledArrayDesigns( valueObjects );
+            auditableUtil.removeTroubledCuratableValueObjects( valueObjects );
         }
         int count = valueObjects.size();
 
@@ -508,7 +508,7 @@ public class ArrayDesignControllerImpl implements ArrayDesignController {
         if ( SecurityUtil.isUserAdmin() ) {
             arrayDesignReportService.fillEventInformation( valueObjects );
         } else {
-            auditableUtil.removeTroubledArrayDesigns( valueObjects );
+            auditableUtil.removeTroubledCuratableValueObjects( valueObjects );
         }
 
         arrayDesignReportService.fillInSubsumptionInfo( valueObjects );
