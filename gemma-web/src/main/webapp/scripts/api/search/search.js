@@ -615,11 +615,11 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
 
          var clazz = r.get( "resultClass" );
          var obj = r.data.resultObject;
-         if ( clazz === "ExpressionExperimentValueObject" ) {
+         if ( clazz === "ExpressionExperiment" ) {
             return value.test( obj.shortName ) || value.test( obj.name );
          } else if ( clazz === "CompositeSequence" ) {
             return value.test( obj.name ) || value.test( obj.description ) || value.test( obj.arrayDesign.shortName );
-         } else if ( clazz === "ArrayDesignValueObject" ) {
+         } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
             return value.test( obj.name ) || value.test( obj.description );
          } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get
             // proxies.
@@ -786,25 +786,25 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
     */
    renderEntityClass : function( data, metadata, record, row, column, store ) {
       var clazz = record.get( "resultClass" );
-      if ( clazz === "ExpressionExperimentValueObject" ) {
+      if ( clazz === "ExpressionExperiment" ) {
          return "Expression dataset";
-      } else if ( clazz === "CompositeSequence" || clazz === "CompositeSequenceValueObject" ) {
+      } else if ( clazz === "CompositeSequence" ) {
          return "Probe";
-      } else if ( clazz === "ArrayDesignValueObject" ) {
+      } else if ( /^ArrayDesign.*/.exec( clazz )) {
          return "Platform";
       } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get proxies.
          return "Sequence";
-      } else if ( clazz === "GeneValueObject" ) {
+      } else if ( clazz === "Gene" ) {
          return "Gene";
-      } else if ( clazz === "GeneSetValueObject" || clazz === "DatabaseBackedGeneSetValueObject" ) {
+      } else if ( clazz === "GeneSet" || clazz === "DatabaseBackedGeneSet" ) {
          return "Gene group";
-      } else if ( clazz === "ExpressionExperimentSetValueObject" ) {
+      } else if ( clazz === "ExpressionExperimentSet" ) {
          return "Experiment group";
-      } else if ( clazz === "BibliographicReferenceValueObject" ) {
+      } else if ( clazz === "BibliographicReference" ) {
          return "Annotated Paper";
       } else if ( clazz === "CharacteristicValueObject" ) {
           return "Phenotype";
-      } else if ( clazz === "BlacklistedValueObject") {
+      } else if ( clazz === "BlacklistedEntity") {
          return "Blacklisted accession";
       } else {
          return clazz;
@@ -813,18 +813,18 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
 
    sortInfo : function( record ) {
       var clazz = record.resultsClass;
-      if ( clazz === "ExpressionExperimentValueObject" ) {
+      if ( clazz === "ExpressionExperiment" ) {
          return record.shortName;
-      } else if ( clazz === "CompositeSequence" || clazz === "CompositeSequenceValueObject" ) {
+      } else if ( clazz === "CompositeSequence" ) {
          return record.name;
-      } else if ( clazz === "ArrayDesignValueObject" ) {
+      } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
          return record.shortName;
-      } else if ( clazz === "BibliographicReferenceValueObject" ) {
+      } else if ( clazz === "BibliographicReference" ) {
          return record.citation;
       } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get proxies.
          return record.name;
-      } else if ( clazz === "GeneValueObject" || clazz === 'GeneSetValueObject'
-         || clazz === "DatabaseBackedGeneSetValueObject" || clazz === 'ExpressionExperimentSetValueObject' ) {
+      } else if ( clazz === "Gene" || clazz === 'GeneSet'
+         || clazz === "DatabaseBackedGeneSet" || clazz === 'ExpressionExperimentSet' ) {
          return record.name;
       } else {
          return clazz;
@@ -833,38 +833,38 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
 
    renderEntity : function( data, metadata, record, row, column, store ) {
       var clazz = record.get( "resultClass" );
-      if ( clazz === "ExpressionExperimentValueObject" ) {
+      if ( clazz === "ExpressionExperiment" ) {
          return "<a href=\"" + Gemma.LinkRoots.expressionExperimentPage
             + (data.sourceExperiment ? data.sourceExperiment : data.id) + "\">" + data.shortName + "</a> - "
             + data.name;
-      } else if ( clazz === "CompositeSequence" || clazz === "CompositeSequenceValueObject" ) {
+      } else if ( clazz === "CompositeSequence" ) {
          return "<a href='" + ctxBasePath + "/compositeSequence/show.html?id=" + data.id + "'>" + data.name + "</a> - "
             + (data.description ? data.description : "")
             + (data.arrayDesign ? "; Platform: " + data.arrayDesign.shortName : '');
-      } else if ( clazz === "ArrayDesignValueObject" ) {
+      } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
          return "<a href='" + ctxBasePath + "/arrays/showArrayDesign.html?id=" + data.id + "'>" + data.shortName + "</a>  "
             + data.name;
       } else if ( /^BioSequence.*/.exec( clazz ) ) {
          return "<a href='" + ctxBasePath + "/genome/bioSequence/showBioSequence.html?id=" + data.id + "'>" + data.name
             + "</a> - " + data.taxon.commonName + " " + (data.description ? data.description : "");
-      } else if ( clazz === "GeneValueObject" || clazz === "PredictedGene" || clazz === "ProbeAlignedRegion" ) {
+      } else if ( clazz === "Gene" || clazz === "PredictedGene" || clazz === "ProbeAlignedRegion" ) {
          return "<a href=\"" + Gemma.LinkRoots.genePage + data.id + "\">" + data.officialSymbol
             + "</a><span style='color:grey'> " + data.taxonCommonName + "</span> "
             + ((data.officialName && data.officialName !== null) ? data.officialName : '');
-      } else if ( clazz === "BibliographicReferenceValueObject" ) {
+      } else if ( clazz === "BibliographicReference" ) {
          return data.citation.citation + (new Ext.Template( Gemma.Common.tpl.pubmedLink.simple )).apply( {
             pubmedURL : data.citation.pubmedURL
          } );
-      } else if ( clazz === "ExpressionExperimentSetValueObject" ) {
+      } else if ( clazz === "ExpressionExperimentSet" ) {
          return "<a href=\"" + Gemma.LinkRoots.expressionExperimentSetPage + data.id + "\">" + data.name
             + "</a><span style='color:grey'> " + data.taxonName + "</span> (" + data.size + ")";
-      } else if ( clazz === "GeneSetValueObject" || clazz === "DatabaseBackedGeneSetValueObject" ) {
+      } else if ( clazz === "GeneSet" || clazz === "DatabaseBackedGeneSet" ) {
          return "<a href=\"" + Gemma.LinkRoots.geneSetPage + data.id + "\">" + data.name
             + "</a><span style='color:grey'> " + data.taxonName + "</span> (" + data.size + ")";
       } else if ( clazz === "CharacteristicValueObject" ) {
           return "<a href=\"" + Gemma.LinkRoots.phenotypePage + data.urlId + "\">" + data.value
               + "</a><span style='color:grey'> " + data.valueUri + '</span>';
-      } else if ( clazz === 'BlacklistedValueObject') {
+      } else if ( clazz === 'BlacklistedEntity') {
          return data.shortName  + '&nbsp;Blacklisted:&nbsp;' + data.name + '<br/>Reason: ' + data.reason;
       } else {
          return data[0];
