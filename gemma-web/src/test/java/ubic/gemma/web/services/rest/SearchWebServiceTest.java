@@ -102,7 +102,7 @@ public class SearchWebServiceTest extends AbstractJUnit4SpringContextTests {
         } );
         when( searchService.getSupportedResultTypes() ).thenReturn( Collections.singleton( Gene.class ) );
 
-        SearchWebService.SearchResultResponseDataObject searchResults = searchWebService.search( "BRCA1", null, null, null, LimitArg.valueOf( "20" ) );
+        SearchWebService.SearchResultResponseDataObject searchResults = searchWebService.search( "BRCA1", null, null, null );
 
         assertThat( searchSettingsArgumentCaptor.getValue() )
                 .hasFieldOrPropertyWithValue( "query", "BRCA1" )
@@ -129,7 +129,7 @@ public class SearchWebServiceTest extends AbstractJUnit4SpringContextTests {
             SearchResult searchResult = args.getArgument( 0, SearchResult.class );
             return new SearchResult<>( Gene.class, new GeneValueObject( ( Gene ) searchResult.getResultObject() ), searchResult.getScore(), searchResult.getHighlightedText() );
         } );
-        searchWebService.search( "BRCA1", TaxonArg.valueOf( "9606" ), null, null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( "BRCA1", TaxonArg.valueOf( "9606" ), null, null );
         verify( taxonService ).findByNcbiId( 9606 );
     }
 
@@ -140,32 +140,32 @@ public class SearchWebServiceTest extends AbstractJUnit4SpringContextTests {
             SearchResult searchResult = args.getArgument( 0, SearchResult.class );
             return new SearchResult<>( Gene.class, new GeneValueObject( ( Gene ) searchResult.getResultObject() ), searchResult.getScore(), searchResult.getHighlightedText() );
         } );
-        searchWebService.search( "BRCA1", null, PlatformArg.valueOf( "1" ), null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( "BRCA1", null, PlatformArg.valueOf( "1" ), null );
         verify( arrayDesignService ).load( 1L );
     }
 
     @Test(expected = BadRequestException.class)
     public void testSearchWhenQueryIsMissing() {
-        searchWebService.search( null, null, null, null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( null, null, null, null );
     }
 
     @Test(expected = BadRequestException.class)
     public void testSearchWhenQueryIsEmpty() {
-        searchWebService.search( null, null, null, null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( null, null, null, null );
     }
 
     @Test(expected = NotFoundException.class)
     public void testSearchWhenUnknownTaxonIsProvided() {
-        searchWebService.search( "brain", TaxonArg.valueOf( "9607" ), null, null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( "brain", TaxonArg.valueOf( "9607" ), null, null );
     }
 
     @Test(expected = NotFoundException.class)
     public void testSearchWhenUnknownPlatformIsProvided() {
-        searchWebService.search( "brain", null, PlatformArg.valueOf( "2" ), null, LimitArg.valueOf( "20" ) );
+        searchWebService.search( "brain", null, PlatformArg.valueOf( "2" ), null );
     }
 
     @Test(expected = BadRequestException.class)
     public void testSearchWhenUnsupportedResultTypeIsProvided() {
-        searchWebService.search( "brain", null, null, Collections.singletonList( "ubic.gemma.model.expression.designElement.CompositeSequence2" ), LimitArg.valueOf( "20" ) );
+        searchWebService.search( "brain", null, null, Collections.singletonList( "ubic.gemma.model.expression.designElement.CompositeSequence2" ) );
     }
 }

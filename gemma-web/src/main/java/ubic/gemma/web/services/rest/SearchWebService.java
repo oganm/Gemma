@@ -56,8 +56,7 @@ public class SearchWebService {
     public SearchResultResponseDataObject search( @QueryParam("query") String query,
             @QueryParam("taxon") TaxonArg<?> taxonArg,
             @QueryParam("platform") PlatformArg<?> platformArg,
-            @QueryParam("resultTypes") List<String> resultTypes,
-            @QueryParam("limit") @DefaultValue("20") LimitArg limit ) {
+            @QueryParam("resultTypes") List<String> resultTypes ) {
         if ( StringUtils.isBlank( query ) ) {
             throw new BadRequestException( "A non-empty query must be supplied." );
         }
@@ -80,15 +79,13 @@ public class SearchWebService {
                 .taxon( taxonArg != null ? taxonArg.getEntity( taxonService ) : null )
                 .platformConstraint( platformArg != null ? platformArg.getEntity( arrayDesignService ) : null )
                 .resultTypes( resultTypesCls )
-                .maxResults( limit.getValue( 100 ) )
                 .build();
 
         // convert the response to search results of VOs
         return new SearchResultResponseDataObject( searchService.search( searchSettings ).values().stream()
+                .map( searchService::loadValueObjects )
                 .flatMap( List::stream )
-                .map( searchService::loadValueObject )
                 .sorted() // SearchResults are sorted by descending score order
-                .limit( limit.getValue( 100 ) ) // results are limited by class, so there might be more results than expected when unraveling everything
                 .map( SearchResultValueObject::new )
                 .collect( Collectors.toList() ), new SearchSettingsValueObject( searchSettings ) );
     }
