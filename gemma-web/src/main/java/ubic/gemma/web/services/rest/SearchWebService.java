@@ -131,6 +131,8 @@ public class SearchWebService {
 
         private final Double score;
 
+        private final String highlightedText;
+
         private final T resultObject;
 
         public SearchResultValueObject( SearchResult<T> searchResult ) {
@@ -138,6 +140,7 @@ public class SearchWebService {
             this.resultType = searchResult.getResultClass().getName();
             this.resultObject = searchResult.getResultObject();
             this.score = searchResult.getScore();
+            this.highlightedText = searchResult.getHighlightedText();
         }
     }
 
