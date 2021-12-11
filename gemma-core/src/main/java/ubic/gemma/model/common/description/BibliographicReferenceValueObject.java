@@ -71,7 +71,7 @@ public class BibliographicReferenceValueObject extends IdentifiableValueObject<B
         super( ref.getId() );
         this.abstractText = ref.getAbstractText();
         this.authorList = ref.getAuthorList();
-        if ( ref.getPubAccession() != null && Hibernate.isInitialized( ref.getPubAccession() ) ) {
+        if ( ref.getPubAccession() != null ) {
             this.pubAccession = ref.getPubAccession().getAccession();
         }
         this.publicationDate = ref.getPublicationDate();

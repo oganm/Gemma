@@ -90,7 +90,7 @@ public class CitationValueObject implements Comparable<CitationValueObject> {
                 .append( ": " ).append( pages );
 
         this.setCitation( buf.toString() );
-        if ( ref.getPubAccession() != null && Hibernate.isInitialized( ref.getPubAccession() ) ) {
+        if ( ref.getPubAccession() != null ) {
             this.setPubmedAccession( ref.getPubAccession().getAccession() );
             this.setPubmedURL( CitationValueObject.PUBMED_URL_ROOT + ref.getPubAccession().getAccession() );
         }
