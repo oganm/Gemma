@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.model.association.Gene2GOAssociationImpl;
 import ubic.gemma.model.association.phenotype.PhenotypeAssociation;
+import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.common.description.Characteristic;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.experiment.ExperimentalFactor;
@@ -72,8 +73,8 @@ public class CharacteristicServiceImpl extends AbstractVoEnabledService<Characte
     }
 
     @Override
-    public Map<Class<?>, Map<String, Collection<Long>>> findExperimentsByUris( Collection<String> uriStrings, Taxon t, int limit ) {
-        return this.characteristicDao.findExperimentsByUris( uriStrings, t, limit );
+    public LinkedHashMap<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> findExperimentsByUris( Collection<String> uriStrings, Taxon t ) {
+        return this.characteristicDao.findExperimentsByUris( uriStrings, t );
     }
 
     @Override

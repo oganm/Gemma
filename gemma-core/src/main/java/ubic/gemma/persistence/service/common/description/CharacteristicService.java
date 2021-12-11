@@ -19,15 +19,15 @@
 package ubic.gemma.persistence.service.common.description;
 
 import org.springframework.security.access.annotation.Secured;
+import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.common.description.Characteristic;
+import ubic.gemma.model.expression.experiment.ExpressionExperiment;
 import ubic.gemma.model.genome.Taxon;
 import ubic.gemma.model.genome.gene.phenotype.valueObject.CharacteristicValueObject;
 import ubic.gemma.persistence.service.BaseVoEnabledService;
 import ubic.gemma.persistence.service.FilteringService;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author paul
@@ -55,19 +55,9 @@ public interface CharacteristicService extends BaseVoEnabledService<Characterist
     List<Characteristic> browse( Integer start, Integer limit, String sortField, boolean descending );
 
     /**
-     * This search looks at direct annotations, factor values and biomaterials in that order. Duplicate EEs are
-     * avoided (and will thus be associated via the first uri that resulted in a hit).
-     * 
-     * @param  uriString uri strings
-     * @param  t         taxon to limit to; null for no limit
-     * @param  limit     try to limit to this many results. No guarantee the limit won't be exceeded. Negative values
-     *                   implies no limit.
-     * @return           map of classes (Experiment, FactorValue, BioMaterial) to the URI to the IDs of experiments
-     *                   which have an
-     *                   associated characteristic using the given uriString. The class lets us track where the
-     *                   annotation was.
+     * @see CharacteristicDao#findExperimentsByUris(Collection, Taxon)
      */
-    Map<Class<?>, Map<String, Collection<Long>>> findExperimentsByUris( Collection<String> uriString, Taxon t, int limit );
+    LinkedHashMap<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> findExperimentsByUris( Collection<String> uriString, Taxon t );
 
     /**
      * given a collection of strings that represent URI's will find all the characteristics that are used in the system
@@ -140,7 +130,7 @@ public interface CharacteristicService extends BaseVoEnabledService<Characterist
     /**
      * Optimized version that only retrieves the IDs of the owning object. The caller has to keep track of the
      * parentClass
-     * 
+     *
      * @param  parentClass     the type of object sought associated with the characteristic
      * @param  characteristics
      * @return

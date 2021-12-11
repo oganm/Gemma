@@ -32,7 +32,7 @@ public class SearchResult<T extends Identifiable> implements Comparable<SearchRe
 
     private final Class<? extends Identifiable> resultClass;
 
-    private final Long resultId;
+    private final long resultId;
 
     private T resultObject;
 
@@ -40,29 +40,33 @@ public class SearchResult<T extends Identifiable> implements Comparable<SearchRe
 
     private String highlightedText;
 
+    /**
+     * This constructor allows you to create an initialized search result, inferring the result type and identifier from
+     * the passed result object.
+     */
     public SearchResult( @NonNull T resultObject ) {
+        if ( resultObject.getId() == null ) {
+            throw new IllegalArgumentException( "Result object id must not be null." );
+        }
         this.resultClass = resultObject.getClass();
         this.resultId = resultObject.getId();
         this.resultObject = resultObject;
-    }
-
-    public SearchResult( @NonNull T searchResult, double score ) {
-        this( searchResult );
-        this.score = score;
-    }
-
-    public SearchResult( @NonNull T searchResult, double score, String highlightedText ) {
-        this( searchResult, score );
-        this.highlightedText = highlightedText;
     }
 
     /**
      * This constructor allows you to create an uninitialized search result. It must however have a result type and
      * identifier.
      */
-    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull Long entityId, double score, String highlightedText ) {
+    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull Long entityId ) {
         this.resultClass = resultClass;
         this.resultId = entityId;
+    }
+
+    /**
+     * @see SearchResult#SearchResult(Class, Long)
+     */
+    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull Long entityId, double score, String highlightedText ) {
+        this( resultClass, entityId );
         this.score = score;
         this.highlightedText = highlightedText;
     }
@@ -70,8 +74,16 @@ public class SearchResult<T extends Identifiable> implements Comparable<SearchRe
     /**
      * This constructor allows you to create a transformed search result that preserves the original entity class.
      */
-    public SearchResult( @NonNull Class<? extends Identifiable> entityClass, @NonNull T entity, double score, String highlightedText ) {
-        this( entityClass, entity.getId(), score, highlightedText );
+    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull T entity ) {
+        this( resultClass, entity.getId() );
+        this.resultObject = entity;
+    }
+
+    /**
+     * @see SearchResult#SearchResult(Class, Identifiable)
+     */
+    public SearchResult( @NonNull Class<? extends Identifiable> resultClass, @NonNull T entity, double score, String highlightedText ) {
+        this( resultClass, entity.getId(), score, highlightedText );
         this.resultObject = entity;
     }
 

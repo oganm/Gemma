@@ -1,6 +1,7 @@
 package ubic.gemma.core.search.source;
 
 import lombok.extern.apachecommons.CommonsLog;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
@@ -54,9 +55,9 @@ import java.util.stream.Collectors;
 public class CompassSearchSource implements SearchSource {
 
     /**
-     * Penalty applied to scores on hits for entities that derive from an association. For example, if a hit to an EE
-     * came from text associated with one of its biomaterials,
-     * the score is penalized by this amount (or, this is just the actual score used)
+     * Penalty applied to score hits for entities that derive from an association. For example, if a hit to an EE
+     * came from text associated with one of its biomaterials, its score is penalized by this amount (or, this is just
+     * the actual score used)
      */
     private static final double INDIRECT_DB_HIT_PENALTY = 0.8;
 
@@ -70,11 +71,14 @@ public class CompassSearchSource implements SearchSource {
      */
     private static final int MAX_LUCENE_HITS = 300;
 
+    /**
+     * Minimum trimmed query length to trigger a full-text search.
+     */
     private static final int MINIMUM_STRING_LENGTH_FOR_FREE_TEXT_SEARCH = 2;
 
     /**
      * Text displayed when we fail to retrieve the information on why a hit was retrieved. This was "[Matching text not
-     * available" but we decided that was confusing.
+     * available]" but we decided that was confusing.
      */
     private static final String HIGHLIGHT_TEXT_NOT_AVAILABLE_MESSAGE = "";
 
@@ -167,11 +171,13 @@ public class CompassSearchSource implements SearchSource {
             genes.put( sr.getResultObject(), sr );
         }
 
-        Map<Gene, Collection<BioSequence>> seqsFromDb = bioSequenceService.findByGenes( genes.keySet() );
-        for ( Gene gene : seqsFromDb.keySet() ) {
-            List<BioSequence> bs = new ArrayList<>( seqsFromDb.get( gene ) );
+        Map<Gene, Collection<BioSequence>> sequencesFromDb = bioSequenceService.findByGenes( genes.keySet() );
+        for ( Gene gene : sequencesFromDb.keySet() ) {
+            Collection<BioSequence> bs = sequencesFromDb.get( gene );
             // bioSequenceService.thawRawAndProcessed( bs );
-            results.addAll( this.dbHitsToSearchResult( bs, genes.get( gene ) ) );
+            for ( BioSequence e : bs ) {
+                results.add( this.dbHitToSearchResult( BioSequence.class, e, genes.get( gene ) ) );
+            }
         }
 
         return results;
@@ -190,7 +196,7 @@ public class CompassSearchSource implements SearchSource {
     }
 
     /**
-     * A compass search on expressionExperiments. The reults are filtered by taxon so that our limits are meaningfully
+     * A compass search on expressionExperiments. The results are filtered by taxon so that our limits are meaningfully
      * applied to next stages of the querying.
      *
      * @return {@link Collection}
@@ -240,7 +246,7 @@ public class CompassSearchSource implements SearchSource {
     private <T extends Identifiable> Set<SearchResult<T>> performSearch( SearchSettings settings, CompassSession session, Class<T> clazz, BaseService<T> service ) {
         StopWatch watch = new StopWatch();
         watch.start();
-        String enhancedQuery = settings.getQuery().trim();
+        String enhancedQuery = settings.getQuery(); // query is already trimmed
 
         //noinspection ConstantConditions
         if ( StringUtils.isBlank( enhancedQuery )
@@ -329,7 +335,12 @@ public class CompassSearchSource implements SearchSource {
             SearchResult<T> r;
             if ( hitsClass.isAssignableFrom( resultObject.getClass() ) ) {
                 //noinspection unchecked
-                r = new SearchResult<>( ( T ) resultObject );
+                T identifiableObject = ( T ) resultObject;
+                if ( fillObjects ) {
+                    r = new SearchResult<>( hitsClass, identifiableObject );
+                } else {
+                    r = new SearchResult<>( hitsClass, identifiableObject.getId() );
+                }
             } else {
                 log.warn( "Incompatible result from compass: " + resultObject );
                 continue;
@@ -342,7 +353,7 @@ public class CompassSearchSource implements SearchSource {
             }
 
             /*
-             * Always give compass hits a lower score so they can be differentiated from exact database hits.
+             * Always give compass hits a lower score, so they can be differentiated from exact database hits.
              */
             r.setScore( score * CompassSearchSource.COMPASS_HIT_SCORE_PENALTY_FACTOR );
 
@@ -388,11 +399,15 @@ public class CompassSearchSource implements SearchSource {
         Collection<T> resultObjects = service.load( resultObjectIds );
         Map<Long, T> resultObjectsById = EntityUtils.getIdMap( resultObjects );
 
+        // only retain results that exist in the database (or that are visible to the current user via ACL rules)
+        // unfortunately, this can only be performed when fillObjects is used, otherwise there is no way to know from
+        // this source to tell if an indexed object still exists
+        //noinspection unchecked
+        CollectionUtils.filter( results, result -> resultObjectsById.containsKey( result.getResultId() ) );
+
         // replace search results objects by loaded ones
         for ( SearchResult<T> result : results ) {
-            if ( resultObjectsById.containsKey( result.getResultId() ) ) {
-                result.setResultObject( resultObjectsById.get( result.getResultId() ) );
-            }
+            result.setResultObject( resultObjectsById.get( result.getResultId() ) );
         }
     }
 
@@ -417,31 +432,12 @@ public class CompassSearchSource implements SearchSource {
         return filteredResults;
     }
 
-    private <T extends Identifiable> List<SearchResult> dbHitsToSearchResult( Collection<T> entities, SearchResult compassHitDerivedFrom ) {
-        StopWatch timer = StopWatch.createStarted();
-        List<SearchResult> results = new ArrayList<>();
-        for ( T e : entities ) {
-            if ( e == null ) {
-                if ( CompassSearchSource.log.isDebugEnabled() )
-                    CompassSearchSource.log.debug( "Null search result object" );
-                continue;
-            }
-            SearchResult<T> esr = this.dbHitToSearchResult( compassHitDerivedFrom, e );
-            results.add( esr );
-        }
-        if ( timer.getTime() > 1000 ) {
-            CompassSearchSource.log.info( "Unpack " + results.size() + " search resultsS: " + timer.getTime() + "ms" );
-        }
-        return results;
-    }
-
-    private <T extends Identifiable> SearchResult<T> dbHitToSearchResult( SearchResult compassHitDerivedFrom, T e ) {
+    private <T extends Identifiable> SearchResult<T> dbHitToSearchResult( Class<T> resultType, T e, SearchResult<? extends Identifiable> compassHitDerivedFrom ) {
         SearchResult<T> esr;
         if ( compassHitDerivedFrom != null ) {
-            esr = new SearchResult<>( e, compassHitDerivedFrom.getScore() * CompassSearchSource.INDIRECT_DB_HIT_PENALTY );
-            esr.setHighlightedText( compassHitDerivedFrom.getHighlightedText() );
+            esr = new SearchResult<>( resultType, e, compassHitDerivedFrom.getScore() * CompassSearchSource.INDIRECT_DB_HIT_PENALTY, compassHitDerivedFrom.getHighlightedText() );
         } else {
-            esr = new SearchResult<>( e, 1.0, null );
+            esr = new SearchResult<>( resultType, e, 1.0, null );
         }
         return esr;
     }

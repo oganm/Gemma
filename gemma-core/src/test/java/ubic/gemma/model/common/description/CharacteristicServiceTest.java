@@ -18,12 +18,14 @@
  */
 package ubic.gemma.model.common.description;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ubic.gemma.core.util.test.BaseSpringContextTest;
+import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.expression.bioAssay.BioAssay;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.experiment.ExperimentalFactor;
@@ -37,6 +39,7 @@ import ubic.gemma.persistence.service.expression.experiment.FactorValueService;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author luke
@@ -55,9 +58,15 @@ public class CharacteristicServiceTest extends BaseSpringContextTest {
     @Autowired
     private FactorValueService fvService;
 
+    /* fixtures */
     private ExpressionExperiment ee;
+    private BioMaterial bm;
+    private ExperimentalFactor ef;
+    private FactorValue fv;
     private Characteristic eeChar1;
     private Characteristic eeChar2;
+    private Characteristic fvChar;
+    private Characteristic bmChar;
 
     @Before
     public void setup() {
@@ -70,22 +79,24 @@ public class CharacteristicServiceTest extends BaseSpringContextTest {
         eeService.update( ee );
 
         BioAssay ba = ee.getBioAssays().toArray( new BioAssay[0] )[0];
-        BioMaterial bm = ba.getSampleUsed();
+        bm = ba.getSampleUsed();
         bm.setCharacteristics( this.getTestPersistentCharacteristics( 1 ) );
+        bmChar = bm.getCharacteristics().iterator().next();
         bmService.update( bm );
 
         for ( ExperimentalFactor ef : testHelper.getExperimentalFactors( ee.getExperimentalDesign() ) ) {
             eeService.addFactor( ee, ef );
         }
 
-        ExperimentalFactor ef = ee.getExperimentalDesign().getExperimentalFactors().iterator().next();
+        ef = ee.getExperimentalDesign().getExperimentalFactors().iterator().next();
 
         for ( FactorValue f : testHelper.getFactorValues( ef ) ) {
             eeService.addFactorValue( ee, f );
         }
 
-        FactorValue fv = ef.getFactorValues().iterator().next();
+        fv = ef.getFactorValues().iterator().next();
         fv.setCharacteristics( this.getTestPersistentCharacteristics( 1 ) );
+        fvChar = fv.getCharacteristics().iterator().next();
         fvService.update( fv );
     }
 
@@ -112,6 +123,7 @@ public class CharacteristicServiceTest extends BaseSpringContextTest {
             Characteristic c = Characteristic.Factory.newInstance();
             c.setCategory( "test" );
             c.setValue( RandomStringUtils.randomNumeric( BaseSpringContextTest.RANDOM_STRING_LENGTH ) );
+            c.setValueUri( "http://" + RandomStringUtils.randomNumeric( BaseSpringContextTest.RANDOM_STRING_LENGTH ) );
             characteristicService.create( c );
             chars.add( c );
         }
@@ -158,5 +170,22 @@ public class CharacteristicServiceTest extends BaseSpringContextTest {
     // assertEquals(new Long(8), (Long) foundEEs.iterator().next().getId());
     //
     // }
+
+    /**
+     * The query is quite complex, so we just want to make sure that it works properly.
+     */
+    @Test
+    public void testFindExperimentsByUris() {
+        Map<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> results = characteristicService.findExperimentsByUris(
+                Sets.newHashSet( eeChar1.getValueUri(), eeChar2.getValueUri(), bmChar.getValueUri(), fvChar.getValueUri() ),
+                ee.getTaxon() );
+        assertTrue( results.containsKey( ExpressionExperiment.class ) );
+        assertTrue( results.get( ExpressionExperiment.class ).containsKey( eeChar1 ) );
+        assertTrue( results.get( ExpressionExperiment.class ).containsKey( eeChar2 ) );
+        assertTrue( results.get( ExpressionExperiment.class ).get( eeChar1 ).contains( ee ) );
+        // TODO: also test ef, and ed characteristics
+        assertTrue( results.get( FactorValue.class ).containsKey( fvChar ) );
+        assertTrue( results.get( BioMaterial.class ).containsKey( bmChar ) );
+    }
 
 }

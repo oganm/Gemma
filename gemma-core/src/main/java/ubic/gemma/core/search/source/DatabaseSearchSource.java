@@ -99,7 +99,7 @@ public class DatabaseSearchSource implements SearchSource {
                     .info( "Array Design Composite Sequence DB search for " + settings + " took " + watch.getTime()
                             + " ms" + " found " + adSet.size() + " Ads" );
 
-        return this.dbHitsToSearchResult( adSet );
+        return this.dbHitsToSearchResult( ArrayDesign.class, adSet );
     }
 
     @Override
@@ -132,7 +132,7 @@ public class DatabaseSearchSource implements SearchSource {
 
         Collection<BioSequence> bs = bioSequenceService.findByName( inexactString );
         // bioSequenceService.thawRawAndProcessed( bs );
-        Collection<SearchResult<BioSequence>> bioSequenceList = new HashSet<>( this.dbHitsToSearchResult( bs ) );
+        Collection<SearchResult<BioSequence>> bioSequenceList = new HashSet<>( this.dbHitsToSearchResult( BioSequence.class, bs ) );
 
         watch.stop();
         if ( watch.getTime() > 1000 )
@@ -152,7 +152,7 @@ public class DatabaseSearchSource implements SearchSource {
     public Collection<SearchResult<CompositeSequence>> searchCompositeSequence( SearchSettings settings ) {
         Set<Gene> geneSet = new HashSet<>();
         Collection<CompositeSequence> matchedCs = this.searchCompositeSequenceAndPopulateGenes( settings, geneSet );
-        return this.dbHitsToSearchResult( matchedCs );
+        return this.dbHitsToSearchResult( CompositeSequence.class, matchedCs );
     }
 
     /**
@@ -163,8 +163,8 @@ public class DatabaseSearchSource implements SearchSource {
         Set<Gene> geneSet = new HashSet<>();
         Collection<CompositeSequence> matchedCs = this.searchCompositeSequenceAndPopulateGenes( settings, geneSet );
         Collection<SearchResult> combinedResults = new HashSet<>();
-        combinedResults.addAll( this.dbHitsToSearchResult( geneSet ) );
-        combinedResults.addAll( this.dbHitsToSearchResult( matchedCs ) );
+        combinedResults.addAll( this.dbHitsToSearchResult( Gene.class, geneSet ) );
+        combinedResults.addAll( this.dbHitsToSearchResult( CompositeSequence.class, matchedCs ) );
         return combinedResults;
     }
 
@@ -303,7 +303,12 @@ public class DatabaseSearchSource implements SearchSource {
             DatabaseSearchSource.log.info( "DB Expression Experiment search for " + settings + " took " + watch.getTime()
                     + " ms and found " + results.size() + " EEs" );
 
-        return this.dbHitsToSearchResult( results );
+        List<SearchResult<ExpressionExperiment>> results1 = new ArrayList<>( results.size() );
+        for ( ExpressionExperiment e : results.keySet() ) {
+            SearchResult<ExpressionExperiment> esr = new SearchResult<>( ExpressionExperiment.class, e, 1.0, results.get( e ) );
+            results1.add( esr );
+        }
+        return results1;
     }
 
     /**
@@ -340,11 +345,11 @@ public class DatabaseSearchSource implements SearchSource {
             //
         }
         if ( result != null ) {
-            results.add( this.dbHitToSearchResult( result, null ) );
+            results.add( new SearchResult<Gene>( Gene.class, result, 1.0, null ) );
         } else {
             result = geneService.findByAccession( searchString, null );
             if ( result != null ) {
-                results.add( this.dbHitToSearchResult( result, null ) );
+                results.add( new SearchResult<Gene>( Gene.class, result, 1.0, null ) );
             }
         }
         if ( results.size() > 0 ) {
@@ -405,7 +410,7 @@ public class DatabaseSearchSource implements SearchSource {
                     .info( "Gene DB search for " + searchString + " took " + watch.getTime() + " ms and found "
                             + geneSet.size() + " genes" );
 
-        results = this.dbHitsToSearchResult( geneSet );
+        results = this.dbHitsToSearchResult( Gene.class, geneSet );
         this.filterByTaxon( settings, results );
         return results;
     }
@@ -424,14 +429,15 @@ public class DatabaseSearchSource implements SearchSource {
     public Collection<SearchResult<CharacteristicValueObject>> searchPhenotype( SearchSettings settings ) {
         if ( !settings.isUseDatabase() )
             return new HashSet<>();
-        return this.dbHitsToSearchResult(
+        // FIXME: this should be a PhenotypeAssociation
+        return this.dbHitsToSearchResult( CharacteristicValueObject.class,
                 this.phenotypeAssociationManagerService.searchInDatabaseForPhenotype( settings.getQuery() ) );
     }
 
     /**
      * Convert hits from database searches into SearchResults.
      */
-    private <T extends Identifiable> List<SearchResult<T>> dbHitsToSearchResult( Collection<T> entities ) {
+    private <T extends Identifiable> List<SearchResult<T>> dbHitsToSearchResult( Class<T> resultType, Collection<T> entities ) {
         StopWatch watch = StopWatch.createStarted();
         List<SearchResult<T>> results = new ArrayList<>();
         for ( T e : entities ) {
@@ -440,32 +446,13 @@ public class DatabaseSearchSource implements SearchSource {
                     DatabaseSearchSource.log.debug( "Null search result object" );
                 continue;
             }
-            SearchResult<T> esr = this.dbHitToSearchResult( e, null );
+            SearchResult<T> esr = new SearchResult<>( resultType, e, 1.0, null );
             results.add( esr );
         }
         if ( watch.getTime() > 1000 ) {
             DatabaseSearchSource.log.info( "Unpack " + results.size() + " search resultsS: " + watch.getTime() + "ms" );
         }
         return results;
-    }
-
-    /**
-     * Convert hits from database searches into SearchResults.
-     */
-    private <T extends Identifiable> List<SearchResult<T>> dbHitsToSearchResult( Map<T, String> entities ) {
-        List<SearchResult<T>> results = new ArrayList<>( entities.size() );
-        for ( T e : entities.keySet() ) {
-            SearchResult<T> esr = this.dbHitToSearchResult( e, entities.get( e ) );
-            results.add( esr );
-        }
-        return results;
-    }
-
-    /**
-     * @param text that matched the query (for highlighting)
-     */
-    private <T extends Identifiable> SearchResult<T> dbHitToSearchResult( T e, String text ) {
-        return new SearchResult<>( e, 1.0, text );
     }
 
     /**

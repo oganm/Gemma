@@ -161,9 +161,9 @@ public abstract class AbstractCLI {
     @SuppressWarnings("static-access")
     protected void addDateOption( Options options ) {
         Option dateOption = Option.builder( "mdate" ).hasArg().desc(
-                "Constrain to run only on entities with analyses older than the given date. "
-                        + "For example, to run only on entities that have not been analyzed in the last 10 days, use '-10d'. "
-                        + "If there is no record of when the analysis was last run, it will be run." )
+                        "Constrain to run only on entities with analyses older than the given date. "
+                                + "For example, to run only on entities that have not been analyzed in the last 10 days, use '-10d'. "
+                                + "If there is no record of when the analysis was last run, it will be run." )
                 .build();
 
         options.addOption( dateOption );
@@ -224,7 +224,7 @@ public abstract class AbstractCLI {
         Option logOpt = new Option( "v", "verbosity", true,
                 "Set verbosity level for all loggers (0=silent, 5=very verbose; default is custom, see log4j.properties)" );
         Option otherLogOpt = Option.builder().longOpt( "logger" ).hasArg().argName( "logger" ).desc( "Configure a specific logger verbosity"
-                + "For example, '--logger ubic.gemma=5' or --logger log4j.logger.org.hibernate.SQL=5" )
+                        + "For example, '--logger ubic.gemma=5' or --logger log4j.logger.org.hibernate.SQL=5" )
                 .build();
 
         options.addOption( otherLogOpt );

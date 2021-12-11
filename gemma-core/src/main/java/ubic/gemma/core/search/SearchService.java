@@ -88,9 +88,9 @@ public interface SearchService {
 
     /**
      * Convert a {@link SearchResult} to its VO flavour.
-     *
+     * <p>
      * The resulting search result preserve the original result class, ID, score and highlighted text.
-     *
+     * <p>
      * The conversion logic is mainly defined by the corresponding {@link ubic.gemma.persistence.service.BaseVoEnabledService}
      * that match the result type. However, some result types do not fully implement that interface or have inefficient
      * defaults for the purpose of producing search results, so this behaviour should not be entirely relied upon.
@@ -104,7 +104,7 @@ public interface SearchService {
 
     /**
      * Convert a collection of {@link SearchResult} to their VO flavours.
-     *
+     * <p>
      * Note that since the results might contain a mixture of different result types, the implementation can take
      * advantage of grouping result by types in order to use {@link ubic.gemma.persistence.service.BaseVoEnabledService#loadValueObjects(Collection)},
      * which is generally more efficient than loading each result individually.

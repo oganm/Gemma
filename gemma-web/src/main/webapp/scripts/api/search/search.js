@@ -616,13 +616,12 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
          var clazz = r.get( "resultClass" );
          var obj = r.data.resultObject;
          if ( clazz === "ExpressionExperiment" ) {
-            return value.test( obj.shortName ) || value.test( obj.name );
+            return value.test( obj.shortname ) || value.test( obj.name );
          } else if ( clazz === "CompositeSequence" ) {
             return value.test( obj.name ) || value.test( obj.description ) || value.test( obj.arrayDesign.shortName );
-         } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
+         } else if ( clazz === "ArrayDesign" ) {
             return value.test( obj.name ) || value.test( obj.description );
-         } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get
-            // proxies.
+         } else if ( clazz === "BioSequence" ) {
             return value.test( obj.name ) || value.test( obj.description ) || value.test( obj.taxon.commonName );
          } else if ( clazz === "Gene" || clazz === "PredictedGene" || clazz === "ProbeAlignedRegion" ) {
             return value.test( obj.officialSymbol ) || value.test( obj.officialName )
@@ -790,9 +789,9 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
          return "Expression dataset";
       } else if ( clazz === "CompositeSequence" ) {
          return "Probe";
-      } else if ( /^ArrayDesign.*/.exec( clazz )) {
+      } else if ( clazz === "ArrayDesign" ) {
          return "Platform";
-      } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get proxies.
+      } else if ( clazz === "BioSequence" ) {
          return "Sequence";
       } else if ( clazz === "Gene" ) {
          return "Gene";
@@ -817,11 +816,11 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
          return record.shortName;
       } else if ( clazz === "CompositeSequence" ) {
          return record.name;
-      } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
+      } else if ( clazz === "ArrayDesign" ) {
          return record.shortName;
       } else if ( clazz === "BibliographicReference" ) {
          return record.citation;
-      } else if ( /^BioSequence.*/.exec( clazz ) ) { // because we get proxies.
+      } else if ( clazz === "BioSequence" ) {
          return record.name;
       } else if ( clazz === "Gene" || clazz === 'GeneSet'
          || clazz === "DatabaseBackedGeneSet" || clazz === 'ExpressionExperimentSet' ) {
@@ -841,10 +840,10 @@ Gemma.SearchGrid = Ext.extend( Ext.grid.GridPanel, {
          return "<a href='" + ctxBasePath + "/compositeSequence/show.html?id=" + data.id + "'>" + data.name + "</a> - "
             + (data.description ? data.description : "")
             + (data.arrayDesign ? "; Platform: " + data.arrayDesign.shortName : '');
-      } else if ( /^ArrayDesign.*/.exec( clazz ) ) {
+      } else if ( clazz === "ArrayDesign" ) {
          return "<a href='" + ctxBasePath + "/arrays/showArrayDesign.html?id=" + data.id + "'>" + data.shortName + "</a>  "
             + data.name;
-      } else if ( /^BioSequence.*/.exec( clazz ) ) {
+      } else if ( clazz === "BioSequence" ) {
          return "<a href='" + ctxBasePath + "/genome/bioSequence/showBioSequence.html?id=" + data.id + "'>" + data.name
             + "</a> - " + data.taxon.commonName + " " + (data.description ? data.description : "");
       } else if ( clazz === "Gene" || clazz === "PredictedGene" || clazz === "ProbeAlignedRegion" ) {

@@ -18,18 +18,16 @@
  */
 package ubic.gemma.persistence.service.common.description;
 
-import java.util.*;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-
 import ubic.basecode.util.BatchIterator;
 import ubic.gemma.model.association.Gene2GOAssociationImpl;
 import ubic.gemma.model.association.phenotype.PhenotypeAssociation;
+import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.common.description.Characteristic;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.biomaterial.Treatment;
@@ -41,6 +39,9 @@ import ubic.gemma.model.genome.gene.phenotype.valueObject.CharacteristicValueObj
 import ubic.gemma.persistence.service.AbstractDao;
 import ubic.gemma.persistence.service.AbstractVoEnabledDao;
 import ubic.gemma.persistence.util.EntityUtils;
+
+import java.math.BigInteger;
+import java.util.*;
 
 /**
  * @author Luke
@@ -70,7 +71,7 @@ public class CharacteristicDaoImpl extends AbstractVoEnabledDao<Characteristic, 
     public List<Characteristic> browse( Integer start, Integer limit, String orderField, boolean descending ) {
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "from Characteristic where value not like 'GO_%' order by " + orderField + " " + ( descending ? "desc" : "" ) ).setMaxResults( limit )
+                        "from Characteristic where value not like 'GO_%' order by " + orderField + " " + ( descending ? "desc" : "" ) ).setMaxResults( limit )
                 .setFirstResult( start ).list();
     }
 
@@ -103,89 +104,93 @@ public class CharacteristicDaoImpl extends AbstractVoEnabledDao<Characteristic, 
         return result;
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked", "cast" })
     @Override
-    public Map<Class<?>, Map<String, Collection<Long>>> findExperimentsByUris( Collection<String> uriStrings, Taxon t, int limit ) {
-        Map<Class<?>, Map<String, Collection<Long>>> result = new HashMap<>();
+    public LinkedHashMap<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> findExperimentsByUris( Collection<String> characteristicUris, Taxon taxon ) {
+        LinkedHashMap<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> result = new LinkedHashMap<>();
 
-        if ( uriStrings.isEmpty() )
+        if ( characteristicUris.isEmpty() )
             return result;
+
+        StopWatch timer = StopWatch.createStarted();
 
         // Note that the limit isn't strictly adhered to; we just stop querying when we have enough. We avoid duplicates
-        Query q;
-        Set<Long> seenIDs = new HashSet<>();
+        Query q = this.getSessionFactory().getCurrentSession().createSQLQuery( "select {ee.*}, {c.*}, max(c.INVESTIGATION_FK) as eeId, max(c.EXPERIMENTAL_DESIGN_FK) as experimentalDesignId, max(c.EXPERIMENTAL_FACTOR_FK) as experimentalFactorId, max(c.FACTOR_VALUE_FK) as factorValueId, max(c.BIO_MATERIAL_FK) as bioMaterialId "
+                        + "from INVESTIGATION as ee, CHARACTERISTIC as c "
+                        + "where c.VALUE_URI in (:valueUris) "
+                        // filter by taxon
+                        + ( taxon != null ? "and ee.TAXON_FK = :taxonId " : "" )
+                        // here goes the expensive clause...
+                        // the non-null checks below are very important because they avoid expensive sub-select when it
+                        // does not apply for the given characteristic
+                        + "and ("
+                        // directly
+                        + "(c.INVESTIGATION_FK is not NULL and ee.ID = c.INVESTIGATION_FK) "
+                        // via experimental design
+                        + "or (c.EXPERIMENTAL_DESIGN_FK is not NULL and ee.EXPERIMENTAL_DESIGN_FK in (select ed.ID from EXPERIMENTAL_DESIGN ed where ed.ID = c.EXPERIMENTAL_DESIGN_FK)) "
+                        // via experimental factor
+                        + "or (c.EXPERIMENTAL_FACTOR_FK is not NULL and ee.EXPERIMENTAL_DESIGN_FK in (select ef.EXPERIMENTAL_DESIGN_FK from EXPERIMENTAL_FACTOR ef where ef.ID = c.EXPERIMENTAL_FACTOR_FK)) "
+                        // via factor values (very expensive)
+                        + "or (c.FACTOR_VALUE_FK is not NULL and ee.EXPERIMENTAL_DESIGN_FK in (select ef.EXPERIMENTAL_DESIGN_FK from EXPERIMENTAL_FACTOR ef join FACTOR_VALUE fv on fv.EXPERIMENTAL_FACTOR_FK = ef.ID where fv.ID = c.FACTOR_VALUE_FK)) "
+                        // via biomaterial (a bit expensive)
+                        + "or (c.BIO_MATERIAL_FK is not NULL and ee.ID in (select ba.EXPRESSION_EXPERIMENT_FK from BIO_ASSAY ba where ba.SAMPLE_USED_FK = c.BIO_MATERIAL_FK))) "
+                        // ensure we have distinct EEs and characteristics
+                        + "group by ee.ID, c.ID "
+                        // NULLs are put last in descending order, so we get the priority we want (ee -> ed -> ef -> fv -> bm)
+                        + "order by eeId desc, experimentalDesignId desc, experimentalFactorId desc, factorValueId desc, bioMaterialId desc" )
+                .addEntity( "ee", ExpressionExperiment.class )
+                .addEntity( "c", Characteristic.class )
+                .addScalar( "eeId" )
+                .addScalar( "experimentalDesignId" )
+                .addScalar( "experimentalFactorId" )
+                .addScalar( "factorValueId" )
+                .addScalar( "bioMaterialId" )
+                .setParameterList( "valueUris", characteristicUris );
 
-        // direct associations
-        // language=HQL
-        q = this.getEEsByUriQuery( "select distinct ee.id, c.valueUri from ExpressionExperiment ee "
-                + "join ee.characteristics c", uriStrings, t, seenIDs );
-        result.put( ExpressionExperiment.class, toEEsByUri( q.list(), seenIDs ) );
+        if ( taxon != null )
+            q.setParameter( "taxonId", taxon.getId() );
 
-        if ( limit > 0 && seenIDs.size() >= limit ) {
-            return result;
+        //noinspection unchecked
+        List<Object[]> r = ( List<Object[]> ) q.list();
+        for ( Object[] o : r ) {
+            ExpressionExperiment ee = ( ExpressionExperiment ) o[0];
+            Characteristic uri = ( Characteristic ) o[1];
+            BigInteger eeId = ( BigInteger ) o[2];
+            BigInteger experimentalDesignId = ( BigInteger ) o[3];
+            BigInteger experimentalFactorId = ( BigInteger ) o[4];
+            BigInteger factorValueId = ( BigInteger ) o[5];
+            BigInteger bioMaterialId = ( BigInteger ) o[6];
+
+            Class<? extends Identifiable> characteristicType;
+            if ( eeId != null ) {
+                characteristicType = ExpressionExperiment.class;
+            } else if ( factorValueId != null ) {
+                characteristicType = FactorValue.class;
+            } else if ( bioMaterialId != null ) {
+                characteristicType = BioMaterial.class;
+            } else {
+                throw new IllegalStateException( "Invalid row when retrieving EEs by characteristic URIs: the characteristic type could not be inferred." );
+            }
+
+            if ( !result.containsKey( characteristicType ) ) {
+                result.put( characteristicType, new HashMap<>() );
+            }
+
+            Map<Characteristic, Set<ExpressionExperiment>> eesByUri = result.get( characteristicType );
+
+            if ( !eesByUri.containsKey( uri ) ) {
+                eesByUri.put( uri, new HashSet<>() );
+            }
+
+            eesByUri.get( uri ).add( ee );
         }
 
-        // via experimental factor
-        // language=HQL
-        q = this.getEEsByUriQuery( "select distinct ee.id, c.valueUri from ExpressionExperiment ee "
-                + "join ee.experimentalDesign ed join ed.experimentalFactors ef "
-                + "join ef.factorValues fv join fv.characteristics c", uriStrings, t, seenIDs );
-        result.put( FactorValue.class, toEEsByUri( q.list(), seenIDs ) );
+        timer.stop();
 
-        if ( limit > 0 && seenIDs.size() >= limit ) {
-            return result;
+        if ( timer.getTime() > 20 ) {
+            log.warn( "Retrieving " + r.size() + " EEs by characteristic URIs [" + String.join( ", ", characteristicUris ) + "] took " + timer.getTime() + " ms." );
         }
-
-        // via biomaterial
-        // language=HQL
-        q = this.getEEsByUriQuery( "select distinct ee.id, c.valueUri  from ExpressionExperiment ee "
-                        + "join ee.bioAssays ba join ba.sampleUsed bm join bm.characteristics c",
-                uriStrings, t, seenIDs );
-        result.put( BioMaterial.class, toEEsByUri( q.list(), seenIDs ) );
 
         return result;
-    }
-
-    private Query getEEsByUriQuery( String query, Collection<String> uriStrings, Taxon t, Set<Long> seenIDs ) {
-        query += " where c.valueUri in (:uriStrings) ";
-
-        // don't retrieve EE IDs that we have already fetched otherwise
-        if ( !seenIDs.isEmpty() ) {
-            query += "and ee.id not in (:seenids) ";
-        }
-
-        // by taxon
-        if ( t != null ) {
-            query += "and ee.taxon = :t";
-        }
-
-        Query q = getSessionFactory().getCurrentSession().createQuery( query );
-        q.setParameterList( "uriStrings", uriStrings );
-        if ( !seenIDs.isEmpty() )
-            q.setParameterList( "seenids", seenIDs );
-        if ( t != null )
-            q.setParameter( "t", t );
-        return q;
-    }
-
-    private Map<String, Collection<Long>> toEEsByUri( List<Object[]> r, Set<Long> seenIDs ) {
-        if ( r.isEmpty() ) {
-            return Collections.emptyMap();
-        }
-        Map<String, Collection<Long>> c = new HashMap<>();
-        for ( Object[] o : r ) {
-            Long eeID = ( Long ) o[0];
-            if ( seenIDs.contains( eeID ) ) continue;
-
-            String uri = ( String ) o[1];
-
-            if ( !c.containsKey( uri ) ) {
-                c.put( uri, new HashSet<>() );
-            }
-            c.get( uri ).add( eeID );
-            seenIDs.add( eeID );
-        }
-        return c;
     }
 
     @Override

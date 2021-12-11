@@ -18,16 +18,16 @@
  */
 package ubic.gemma.persistence.service.common.description;
 
+import ubic.gemma.model.common.Identifiable;
 import ubic.gemma.model.common.description.Characteristic;
+import ubic.gemma.model.expression.experiment.ExpressionExperiment;
 import ubic.gemma.model.genome.Taxon;
 import ubic.gemma.model.genome.gene.phenotype.valueObject.CharacteristicValueObject;
 import ubic.gemma.persistence.service.BaseVoEnabledDao;
 import ubic.gemma.persistence.service.BrowsingDao;
 import ubic.gemma.persistence.util.ObjectFilter;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @see ubic.gemma.model.common.description.Characteristic
@@ -69,19 +69,26 @@ public interface CharacteristicDao
     Collection<Characteristic> findByUri( Collection<Class<?>> classes, Collection<String> characteristicUris );
 
     /**
-     * This search looks at direct annotations, factor values and biomaterials in that order. Duplicate EEs are avoided
-     * (and will thus be associated via the first uri that resulted in a hit).
+     * This search looks at direct or indirect annotations in the following order:
+     * <ul>
+     *     <li>direct on {@link ubic.gemma.model.expression.experiment.ExpressionExperiment}</li>
+     *     <li>via {@link ubic.gemma.model.expression.experiment.ExperimentalDesign}</li>
+     *     <li>via {@link ubic.gemma.model.expression.experiment.ExperimentalFactor}</li>
+     *     <li>via {@link ubic.gemma.model.expression.experiment.FactorValue}</li>
+     *     <li>via {@link ubic.gemma.model.expression.biomaterial.BioMaterial}</li>
+     * </ul>
+     * <p>
+     * The {@link LinkedHashMap} return type is merely there to convey the idea that the map preserves the insertion
+     * order of its keys, and thus the expected order by relative annotation importance.
      *
-     * @param  uriStrings
-     * @param  t          taxon to limit to (can be null for no limit)
-     * @param  limit      approximate limit to how many results to return (just used to avoid extra queries; the limit
-     *                    may be exceeded). Set to 0 for no limit.
-     * @return map of classes (Experiment, FactorValue, BioMaterial) to the matching uri to IDs of
-     *                    experiments which have an
-     *                    associated characteristic using the given uriString. The class lets us track where the
-     *                    annotation was.
+     * @param characteristicUris URIs used to search for {@link Characteristic} of EEs, factor values and biomaterials
+     * @param taxon              a taxon to restrict EEs, or null for no restriction
+     * @return map of classes ({@link ExpressionExperiment}, {@link ubic.gemma.model.expression.experiment.FactorValue}
+     * or {@link ubic.gemma.model.expression.biomaterial.BioMaterial}, etc.) to a mapping of {@link ExpressionExperiment}
+     * by {@link Characteristic}. The outer mapping let us track where the annotation was, and the inner mapping let us
+     * know which characteristic was matched from the passed collection of URIs.
      */
-    Map<Class<?>, Map<String, Collection<Long>>> findExperimentsByUris( Collection<String> uriStrings, Taxon t, int limit );
+    LinkedHashMap<Class<? extends Identifiable>, Map<Characteristic, Set<ExpressionExperiment>>> findExperimentsByUris( Collection<String> characteristicUris, Taxon taxon );
 
     Collection<Characteristic> findByUri( Collection<String> uris );
 

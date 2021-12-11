@@ -15,10 +15,12 @@
 package ubic.gemma.persistence.service.common.description;
 
 import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import ubic.basecode.util.BatchIterator;
 import ubic.gemma.model.common.description.BibliographicReference;
 import ubic.gemma.model.common.description.BibliographicReferenceValueObject;
@@ -48,7 +50,7 @@ public class BibliographicReferenceDaoImpl
     public BibliographicReference findByExternalId( final String id, final String databaseName ) {
         //noinspection unchecked
         return ( BibliographicReference ) this.getSessionFactory().getCurrentSession().createQuery(
-                "from BibliographicReference b where b.pubAccession.accession=:id AND b.pubAccession.externalDatabase.name=:databaseName" )
+                        "from BibliographicReference b where b.pubAccession.accession=:id AND b.pubAccession.externalDatabase.name=:databaseName" )
                 .setParameter( "id", id ).setParameter( "databaseName", databaseName ).uniqueResult();
     }
 
@@ -77,8 +79,8 @@ public class BibliographicReferenceDaoImpl
         if ( bibliographicReference == null || bibliographicReference.getId() == null )
             return bibliographicReference;
         return ( BibliographicReference ) this.getSessionFactory().getCurrentSession().createQuery(
-                "select b from BibliographicReference b left join fetch b.pubAccession left join fetch b.chemicals "
-                        + "left join fetch b.meshTerms left join fetch b.keywords where b.id = :id " )
+                        "select b from BibliographicReference b left join fetch b.pubAccession left join fetch b.chemicals "
+                                + "left join fetch b.meshTerms left join fetch b.keywords where b.id = :id " )
                 .setParameter( "id", bibliographicReference.getId() ).uniqueResult();
     }
 
@@ -88,8 +90,8 @@ public class BibliographicReferenceDaoImpl
             return bibliographicReferences;
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "select b from BibliographicReference b left join fetch b.pubAccession left join fetch b.chemicals "
-                        + "left join fetch b.meshTerms left join fetch b.keywords where b.id in (:ids) " )
+                        "select b from BibliographicReference b left join fetch b.pubAccession left join fetch b.chemicals "
+                                + "left join fetch b.meshTerms left join fetch b.keywords where b.id in (:ids) " )
                 .setParameterList( "ids", EntityUtils.getIds( bibliographicReferences ) ).list();
     }
 
@@ -175,6 +177,7 @@ public class BibliographicReferenceDaoImpl
 
     @Override
     public BibliographicReferenceValueObject loadValueObject( BibliographicReference entity ) {
+        Hibernate.initialize( entity.getPubAccession() );
         return new BibliographicReferenceValueObject( entity );
     }
 

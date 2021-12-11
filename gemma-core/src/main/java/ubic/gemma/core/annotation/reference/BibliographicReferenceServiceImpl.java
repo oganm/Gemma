@@ -15,6 +15,7 @@
 package ubic.gemma.core.annotation.reference;
 
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,11 +70,13 @@ public class BibliographicReferenceServiceImpl
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BibliographicReferenceValueObject loadValueObject( BibliographicReference entity ) {
         return this.loadMultipleValueObjectsFromObjects( Collections.singleton( entity ) ).iterator().next();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BibliographicReferenceValueObject> loadAllValueObjects() {
         return this.loadMultipleValueObjectsFromObjects( this.loadAll() );
     }

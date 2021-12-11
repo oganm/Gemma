@@ -16,8 +16,9 @@ import ubic.gemma.model.expression.arrayDesign.ArrayDesignValueObject;
 import ubic.gemma.model.genome.TaxonValueObject;
 import ubic.gemma.persistence.service.expression.arrayDesign.ArrayDesignService;
 import ubic.gemma.persistence.service.genome.taxon.TaxonService;
+import ubic.gemma.persistence.util.Sort;
 import ubic.gemma.web.services.rest.util.ResponseDataObject;
-import ubic.gemma.web.services.rest.util.args.LimitArg;
+import ubic.gemma.web.services.rest.util.SortValueObject;
 import ubic.gemma.web.services.rest.util.args.PlatformArg;
 import ubic.gemma.web.services.rest.util.args.TaxonArg;
 
@@ -53,7 +54,7 @@ public class SearchWebService {
     @GET
     @Produces(MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search everything in Gemma.")
-    public SearchResultResponseDataObject search( @QueryParam("query") String query,
+    public SearchResultsResponseDataObject search( @QueryParam("query") String query,
             @QueryParam("taxon") TaxonArg<?> taxonArg,
             @QueryParam("platform") PlatformArg<?> platformArg,
             @QueryParam("resultTypes") List<String> resultTypes ) {
@@ -82,7 +83,7 @@ public class SearchWebService {
                 .build();
 
         // convert the response to search results of VOs
-        return new SearchResultResponseDataObject( searchService.search( searchSettings ).values().stream()
+        return new SearchResultsResponseDataObject( searchService.search( searchSettings ).values().stream()
                 .map( searchService::loadValueObjects )
                 .flatMap( List::stream )
                 .sorted() // SearchResults are sorted by descending score order
@@ -141,20 +142,32 @@ public class SearchWebService {
         }
     }
 
-    public static class SearchResultResponseDataObject extends ResponseDataObject<List<SearchResultValueObject>> {
+    public static class SearchResultsResponseDataObject extends ResponseDataObject<List<SearchResultValueObject>> {
 
         private final SearchSettingsValueObject searchSettings;
+        private final SortValueObject sort;
+        private final long totalElements;
 
         /**
          * @param payload the data to be serialised and returned as the response payload.
          */
-        public SearchResultResponseDataObject( List<SearchResultValueObject> payload, SearchSettingsValueObject searchSettings ) {
+        public SearchResultsResponseDataObject( List<SearchResultValueObject> payload, SearchSettingsValueObject searchSettings ) {
             super( payload );
             this.searchSettings = searchSettings;
+            this.sort = new SortValueObject( Sort.by( null, "score", Sort.Direction.DESC ) );
+            this.totalElements = payload.size();
         }
 
         public SearchSettingsValueObject getSearchSettings() {
-            return searchSettings;
+            return this.searchSettings;
+        }
+
+        public SortValueObject getSort() {
+            return this.sort;
+        }
+
+        public long getTotalElements() {
+            return this.totalElements;
         }
     }
 }

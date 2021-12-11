@@ -44,7 +44,7 @@ import java.util.HashSet;
  *
  * @see ExpressionExperimentSetService
  */
-@Service
+@Service("expressionExperimentSetService")
 public class ExpressionExperimentSetServiceImpl
         extends AbstractVoEnabledService<ExpressionExperimentSet, ExpressionExperimentSetValueObject>
         implements ExpressionExperimentSetService {

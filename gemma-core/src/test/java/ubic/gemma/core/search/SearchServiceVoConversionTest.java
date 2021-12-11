@@ -243,6 +243,7 @@ public class SearchServiceVoConversionTest extends AbstractJUnit4SpringContextTe
         phenotypeAssociation = new CharacteristicValueObject();
         phenotypeAssociation.setId( 14L );
         when( arrayDesignService.loadValueObject( any( ArrayDesign.class ) ) ).thenAnswer( a -> new ArrayDesignValueObject( a.getArgument( 0, ArrayDesign.class ) ) );
+        //noinspection unchecked
         when( arrayDesignService.loadValueObjects( anyCollection() ) ).thenAnswer( a -> ( ( Collection<ArrayDesign> ) a.getArgument( 0, Collection.class ) )
                 .stream()
                 .map( ArrayDesignValueObject::new )
@@ -251,9 +252,9 @@ public class SearchServiceVoConversionTest extends AbstractJUnit4SpringContextTe
         when( expressionExperimentService.loadValueObject( any( ExpressionExperiment.class ) ) ).thenAnswer( a -> new ExpressionExperimentValueObject( a.getArgument( 0, ExpressionExperiment.class ) ) );
         when( geneSetService.loadValueObject( any( GeneSet.class ) ) ).thenAnswer( a -> {
             GeneSet geneSet = a.getArgument( 0, GeneSet.class );
-            DatabaseBackedGeneSetValueObject dbgsvo = new DatabaseBackedGeneSetValueObject();
-            dbgsvo.setId( geneSet.getId() );
-            return dbgsvo;
+            DatabaseBackedGeneSetValueObject geneSetVo = new DatabaseBackedGeneSetValueObject();
+            geneSetVo.setId( geneSet.getId() );
+            return geneSetVo;
         } );
     }
 
