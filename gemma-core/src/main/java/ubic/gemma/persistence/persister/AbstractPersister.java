@@ -23,10 +23,10 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.FlushMode;
+import org.hibernate.SessionFactory;
 import org.hibernate.classic.Session;
 import org.hibernate.engine.ForeignKeys;
 import org.hibernate.engine.SessionImplementor;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.persistence.util.EntityUtils;
 
@@ -39,7 +39,7 @@ import java.util.HashSet;
  *
  * @author pavlidis
  */
-public abstract class AbstractPersister extends HibernateDaoSupport implements Persister {
+public abstract class AbstractPersister implements Persister {
 
     static final Log log = LogFactory.getLog( AbstractPersister.class.getName() );
     /**
@@ -50,6 +50,16 @@ public abstract class AbstractPersister extends HibernateDaoSupport implements P
      * How many times per collection to update us (at most)
      */
     private static final int COLLECTION_INFO_FREQUENCY = 10;
+
+    private final SessionFactory sessionFactory;
+
+    public AbstractPersister( SessionFactory sessionFactory ) {
+        this.sessionFactory = sessionFactory;
+    }
+
+    protected SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
 
     @Override
     @Transactional

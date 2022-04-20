@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.basecode.dataStructure.CountingMap;
@@ -56,7 +55,7 @@ import java.util.*;
  */
 @SuppressWarnings("unchecked")
 @Repository
-public class CoexpressionDaoImpl extends HibernateDaoSupport implements CoexpressionDao {
+public class CoexpressionDaoImpl implements CoexpressionDao {
 
     /*
      * Important implementation note: For efficiency reason, it is important that gene-level links be stored clustered
@@ -105,9 +104,7 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
     private GeneTestedInCache geneTestedInCache;
 
     @Autowired
-    public CoexpressionDaoImpl( SessionFactory sessionFactory ) {
-        super.setSessionFactory( sessionFactory );
-    }
+    private SessionFactory sessionFactory;
 
     @Override
     public Integer countLinks( Gene gene, BioAssaySet ee ) {
@@ -157,7 +154,7 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
         Map<NonPersistentNonOrderedCoexpLink, Boolean> existingResults = this.preFetch( links );
 
         String s = "from " + geneLinkClassName + " where firstGene =:f and secondGene=:s and positiveCorrelation=:pc";
-        Query q = sess.createQuery(s );
+        Query q = sess.createQuery( s );
 
         SQLQuery updateFlippedLinkQuery = sess.createSQLQuery(
                 "UPDATE " + CoexpressionQueryUtils.getGeneLinkTableName( gene.getTaxon() )
@@ -472,7 +469,7 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
 
             // remove the ExperimentCoexpressionLinks
             int numDeleted = sess.createQuery(
-                    "delete from " + CoexpressionQueryUtils.getExperimentLinkClassName( t ) + " where experiment=:ee" )
+                            "delete from " + CoexpressionQueryUtils.getExperimentLinkClassName( t ) + " where experiment=:ee" )
                     .setParameter( "ee", experiment ).executeUpdate();
             CoexpressionDaoImpl.log.info( "Deleted " + numDeleted + " experiment-level links" );
 
@@ -909,15 +906,15 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
         return ( List<Object[]> ) query1.list();
     }
 
-    private int process( List<Double> relRanks , Session sess, ByteArrayConverter bac, int i,
+    private int process( List<Double> relRanks, Session sess, ByteArrayConverter bac, int i,
             Long g, boolean positive ) {
         GeneCoexpressionNodeDegree nd = ( GeneCoexpressionNodeDegree ) sess.load( GeneCoexpressionNodeDegree.class, g );
 
         byte[] r = bac.doubleArrayToBytes( relRanks.toArray( new Double[] {} ) );
 
-        if(positive) {
+        if ( positive ) {
             nd.setRelativeLinkRanksPositive( r );
-        }else{
+        } else {
             nd.setRelativeLinkRanksNegative( r );
         }
 
@@ -1277,9 +1274,9 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
         // the forward version, so we only get half of the g2g links here.
         CoexpressionDaoImpl.log.info( "Fetching support details ..." );
         List<Long> supportDetails = sess.createQuery(
-                "select distinct sd.id from " + CoexpressionQueryUtils.getExperimentLinkClassName( t ) + " e, "
-                        + CoexpressionQueryUtils.getGeneLinkClassName( t )
-                        + " g2g join g2g.supportDetails sd where e.experiment=:ee and e.linkId = g2g.id " )
+                        "select distinct sd.id from " + CoexpressionQueryUtils.getExperimentLinkClassName( t ) + " e, "
+                                + CoexpressionQueryUtils.getGeneLinkClassName( t )
+                                + " g2g join g2g.supportDetails sd where e.experiment=:ee and e.linkId = g2g.id " )
                 .setParameter( "ee", experiment ).list();
 
         Collections.sort( supportDetails );
@@ -1292,7 +1289,7 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
         BatchIterator<Long> bi = BatchIterator.batches( supportDetails, 1024 );
         for ( ; bi.hasNext(); ) {
             results.addAll( sess.createQuery( "from " + CoexpressionQueryUtils.getGeneLinkClassName( t )
-                    + " g2g join fetch g2g.supportDetails sd where sd.id in (:ids)" )
+                            + " g2g join fetch g2g.supportDetails sd where sd.id in (:ids)" )
                     .setParameterList( "ids", bi.next() ).list() );
             if ( ++i % 200 == 0 ) {
                 CoexpressionDaoImpl.log.info( i + " batches fetched (" + results.size() + " links fetched so far)" );
@@ -1712,8 +1709,8 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
 
         // distinct okay here because we're not counting stringency based on the raw results here. See comment below.
         Query q = this.getSessionFactory().getCurrentSession().createQuery(
-                "select distinct linkId from " + CoexpressionQueryUtils.getExperimentLinkClassName( t )
-                        + " where experiment.id in (:ees) and firstGene in (:genes) and secondGene in (:genes2)" )
+                        "select distinct linkId from " + CoexpressionQueryUtils.getExperimentLinkClassName( t )
+                                + " where experiment.id in (:ees) and firstGene in (:genes) and secondGene in (:genes2)" )
                 .setParameterList( "ees", bas ).setParameterList( "genes", genes ).setParameterList( "genes2", genes );
 
         StopWatch timer = new StopWatch();
@@ -1772,34 +1769,37 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
         List<CoexpressionValueObject> g2gs = new ArrayList<>( genes.size() );
         Set<CoexpressionValueObject> seen = new HashSet<>();
 
-        for ( ; it.hasNext(); ) {
+        while ( it.hasNext() ) {
 
             Collection<Long> queryGeneBatch = it.next();
             StopWatch timer = new StopWatch();
             timer.start();
 
-            Collection<Gene2GeneCoexpression> r = this.getHibernateTemplate()
-                    .findByNamedParam( firstQueryString, new String[] { "qgene", "genes", "stringency" },
-                            new Object[] { queryGeneBatch, genes, stringency } );
+            Collection<Gene2GeneCoexpression> r = this.getSessionFactory().getCurrentSession()
+                    .createQuery( firstQueryString )
+                    .setParameterList( "qgene", queryGeneBatch )
+                    .setParameterList( "genes", genes )
+                    .setParameter( "stringency", stringency )
+                    .list();
 
             if ( timer.getTime() > 5000 ) {
                 CoexpressionDaoImpl.log
                         .debug( "Slow query: " + firstQueryString + " took " + timer.getTime() + "ms (" + queryGeneBatch
                                 .size() + " query gene batch, " + genes.size() + " target genes), Stringency="
                                 + stringency );
-            }
 
-            // raw db results, for a batch of genes, add to the whole.
-            for ( Gene2GeneCoexpression g2g : r ) {
-                CoexpressionValueObject g2gvo = new CoexpressionValueObject( g2g );
+                // raw db results, for a batch of genes, add to the whole.
+                for ( Gene2GeneCoexpression g2g : r ) {
+                    CoexpressionValueObject g2gvo = new CoexpressionValueObject( g2g );
 
-                // we get the links in 'both directions' so we want to omit them. This means some of the query genes
-                // might not be returned as query genes, since they show up in the 'coexpressed' gene instead.
-                if ( seen.contains( g2gvo ) )
-                    continue;
-                seen.add( g2gvo );
-                g2gvo.setInterQueryLink( true );
-                g2gs.add( g2gvo );
+                    // we get the links in 'both directions' so we want to omit them. This means some of the query genes
+                    // might not be returned as query genes, since they show up in the 'coexpressed' gene instead.
+                    if ( seen.contains( g2gvo ) )
+                        continue;
+                    seen.add( g2gvo );
+                    g2gvo.setInterQueryLink( true );
+                    g2gs.add( g2gvo );
+                }
             }
         }
 
@@ -2442,4 +2442,7 @@ public class CoexpressionDaoImpl extends HibernateDaoSupport implements Coexpres
                 .info( "Updated gene-coexpressed-with information for " + coexpressions.size() + " genes." );
     }
 
+    private SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
 }

@@ -19,6 +19,7 @@
 package ubic.gemma.persistence.persister;
 
 import org.hibernate.FlushMode;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.model.common.description.DatabaseEntry;
@@ -46,6 +47,10 @@ abstract public class ArrayDesignPersister extends GenomePersister {
 
     @Autowired
     private ArrayDesignDao arrayDesignDao;
+
+    public ArrayDesignPersister( SessionFactory sessionFactory ) {
+        super( sessionFactory );
+    }
 
     @Override
     @Transactional

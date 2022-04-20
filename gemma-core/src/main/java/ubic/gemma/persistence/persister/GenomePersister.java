@@ -21,6 +21,7 @@ package ubic.gemma.persistence.persister;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.FlushMode;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.model.association.BioSequence2GeneProduct;
@@ -67,6 +68,10 @@ abstract public class GenomePersister extends CommonPersister {
     private BlatResultDao blatResultDao;
     @Autowired
     private AnnotationAssociationDao annotationAssociationDao;
+
+    public GenomePersister( SessionFactory sessionFactory ) {
+        super( sessionFactory );
+    }
 
     @Override
     @Transactional

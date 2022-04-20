@@ -20,6 +20,7 @@ package ubic.gemma.persistence.persister;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.hibernate.FlushMode;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.model.common.auditAndSecurity.Contact;
@@ -71,6 +72,10 @@ abstract public class ExpressionPersister extends ArrayDesignPersister {
     private FactorValueDao factorValueDao;
     @Autowired
     private ExpressionExperimentPrePersistService expressionExperimentPrePersistService;
+
+    public ExpressionPersister( SessionFactory sessionFactory ) {
+        super( sessionFactory );
+    }
 
     @Override
     @Transactional

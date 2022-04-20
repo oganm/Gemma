@@ -132,25 +132,20 @@ public class BioSequenceDaoImpl extends AbstractVoEnabledDao<BioSequence, BioSeq
     public Collection<Gene> getGenesByAccession( String search ) {
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "select distinct gene from Gene as gene inner join gene.products gp,  BioSequence2GeneProduct as bs2gp"
-                        + " inner join bs2gp.bioSequence bs "
-                        + "inner join bs.sequenceDatabaseEntry de where gp=bs2gp.geneProduct "
-                        + " and de.accession = :search " )
+                        "select distinct gene from Gene as gene inner join gene.products gp,  BioSequence2GeneProduct as bs2gp"
+                                + " inner join bs2gp.bioSequence bs "
+                                + "inner join bs.sequenceDatabaseEntry de where gp=bs2gp.geneProduct "
+                                + " and de.accession = :search " )
                 .setParameter( "search", search ).list();
     }
 
     @Override
     public Collection<Gene> getGenesByName( String search ) {
-        try {
-            //noinspection unchecked
-            return this.getSessionFactory().getCurrentSession().createQuery(
-                    "select distinct gene from Gene as gene inner join gene.products gp,  BioSequence2GeneProduct as bs2gp where gp=bs2gp.geneProduct "
-                            + " and bs2gp.bioSequence.name like :search " )
-                    .setString( "search", search ).list();
-
-        } catch ( org.hibernate.HibernateException ex ) {
-            throw getHibernateTemplate().convertHibernateAccessException( ex );
-        }
+        //noinspection unchecked
+        return this.getSessionFactory().getCurrentSession().createQuery(
+                        "select distinct gene from Gene as gene inner join gene.products gp,  BioSequence2GeneProduct as bs2gp where gp=bs2gp.geneProduct "
+                                + " and bs2gp.bioSequence.name like :search " )
+                .setString( "search", search ).list();
     }
 
     @Override
@@ -183,21 +178,20 @@ public class BioSequenceDaoImpl extends AbstractVoEnabledDao<BioSequence, BioSeq
         if ( bioSequence.getId() == null )
             return bioSequence;
 
-        List<?> res = this.getHibernateTemplate().findByNamedParam( "select b from BioSequence b "
-                + " left join fetch b.taxon tax left join fetch tax.externalDatabase "
-                + " left join fetch b.sequenceDatabaseEntry s left join fetch s.externalDatabase"
-                + " left join fetch b.bioSequence2GeneProduct bs2gp "
-                + " left join fetch bs2gp.geneProduct gp left join fetch gp.gene g"
-                + " left join fetch g.aliases left join fetch g.accessions  where b.id=:bid", "bid",
-                bioSequence.getId() );
-
-        return ( BioSequence ) res.iterator().next();
+        return ( BioSequence ) getSessionFactory().getCurrentSession().createQuery( "select b from BioSequence b "
+                        + " left join fetch b.taxon tax left join fetch tax.externalDatabase "
+                        + " left join fetch b.sequenceDatabaseEntry s left join fetch s.externalDatabase"
+                        + " left join fetch b.bioSequence2GeneProduct bs2gp "
+                        + " left join fetch bs2gp.geneProduct gp left join fetch gp.gene g"
+                        + " left join fetch g.aliases left join fetch g.accessions  where b.id=:bid" )
+                .setParameter( "bid", bioSequence.getId() )
+                .uniqueResult();
     }
 
     @Override
     public BioSequence findByCompositeSequence( CompositeSequence compositeSequence ) {
         return ( BioSequence ) this.getSessionFactory().getCurrentSession().createQuery(
-                "select cs.biologicalCharacteristic from CompositeSequence as cs where cs = :cs" )
+                        "select cs.biologicalCharacteristic from CompositeSequence as cs where cs = :cs" )
                 .setParameter( "cs", compositeSequence ).uniqueResult();
     }
 
@@ -261,20 +255,21 @@ public class BioSequenceDaoImpl extends AbstractVoEnabledDao<BioSequence, BioSeq
 
     private Collection<? extends BioSequence> doThawBatch( Collection<BioSequence> batch ) {
         //noinspection unchecked
-        return this.getHibernateTemplate().findByNamedParam( "select b from BioSequence b "
-                + " left join fetch b.taxon tax left join fetch tax.externalDatabase left join fetch b.sequenceDatabaseEntry s "
-                + " left join fetch s.externalDatabase" + " left join fetch b.bioSequence2GeneProduct bs2gp "
-                + " left join fetch bs2gp.geneProduct gp left join fetch gp.gene g"
-                + " left join fetch g.aliases left join fetch g.accessions  where b.id in (:bids)", "bids",
-                EntityUtils.getIds( batch ) );
+        return this.getSessionFactory().getCurrentSession().createQuery( "select b from BioSequence b "
+                        + " left join fetch b.taxon tax left join fetch tax.externalDatabase left join fetch b.sequenceDatabaseEntry s "
+                        + " left join fetch s.externalDatabase" + " left join fetch b.bioSequence2GeneProduct bs2gp "
+                        + " left join fetch bs2gp.geneProduct gp left join fetch gp.gene g"
+                        + " left join fetch g.aliases left join fetch g.accessions  where b.id in (:bids)" )
+                .setParameterList( "bids", EntityUtils.getIds( batch ) )
+                .list();
     }
 
     private void findByGenesBatch( Collection<Gene> genes, Map<Gene, Collection<BioSequence>> results ) {
         //noinspection unchecked
         List<Object[]> qr = this.getSessionFactory().getCurrentSession().createQuery(
-                "select distinct gene,bs from Gene gene inner join fetch gene.products ggp,"
-                        + " BioSequence bs inner join bs.bioSequence2GeneProduct bs2gp inner join bs2gp.geneProduct bsgp"
-                        + " where ggp=bsgp and gene in (:genes)" )
+                        "select distinct gene,bs from Gene gene inner join fetch gene.products ggp,"
+                                + " BioSequence bs inner join bs.bioSequence2GeneProduct bs2gp inner join bs2gp.geneProduct bsgp"
+                                + " where ggp=bsgp and gene in (:genes)" )
                 .setParameterList( "genes", genes ).list();
         for ( Object[] oa : qr ) {
             Gene g = ( Gene ) oa[0];

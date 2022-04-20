@@ -50,7 +50,7 @@ public abstract class AnalysisDaoBase<T extends Analysis> extends AbstractDao<T>
     public Collection<T> findByInvestigation( final Investigation investigation ) {
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "select an  from " + this.analysisClass.getSimpleName() + " an where an.experimentAnalyzed = :ee" )
+                        "select an  from " + this.analysisClass.getSimpleName() + " an where an.experimentAnalyzed = :ee" )
                 .setParameter( "ee", investigation ).list();
     }
 
@@ -77,7 +77,9 @@ public abstract class AnalysisDaoBase<T extends Analysis> extends AbstractDao<T>
                 + " an inner join an.experimentAnalyzed ee inner join ee.bioAssays ba "
                 + "inner join ba.sampleUsed sample where sample.sourceTaxon = :taxon ";
         //noinspection unchecked
-        return this.getHibernateTemplate().findByNamedParam( queryString, "taxon", taxon );
+        return getSessionFactory().getCurrentSession().createQuery( queryString )
+                .setParameter( "taxon", taxon )
+                .list();
     }
 
     @Override

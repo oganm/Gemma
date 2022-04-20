@@ -18,6 +18,7 @@
  */
 package ubic.gemma.persistence.persister;
 
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import ubic.gemma.model.common.auditAndSecurity.*;
 import ubic.gemma.model.common.description.BibliographicReference;
@@ -77,6 +78,10 @@ abstract public class CommonPersister extends AbstractPersister {
 
     @Autowired
     private DatabaseEntryDao databaseEntryDao;
+
+    public CommonPersister( SessionFactory sessionFactory ) {
+        super( sessionFactory );
+    }
 
     @Override
     public Object persist( Object entity ) {

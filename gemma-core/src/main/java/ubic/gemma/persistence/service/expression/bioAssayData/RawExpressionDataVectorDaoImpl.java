@@ -42,12 +42,12 @@ public class RawExpressionDataVectorDaoImpl extends DesignElementDataVectorDaoIm
 
     @Override
     public ExpressionExperiment addVectors( Long eeId, Collection<RawExpressionDataVector> vectors ) {
-        ExpressionExperiment ee = this.getHibernateTemplate().load( ExpressionExperiment.class, eeId );
+        ExpressionExperiment ee = ( ExpressionExperiment ) this.getSessionFactory().getCurrentSession().load( ExpressionExperiment.class, eeId );
         if ( ee == null ) {
             throw new IllegalArgumentException( "Experiment with id=" + eeId + " not found" );
         }
         ee.getRawExpressionDataVectors().addAll( vectors );
-        this.getHibernateTemplate().update( ee );
+        this.getSessionFactory().getCurrentSession().update( ee );
         return ee;
     }
 
@@ -73,9 +73,9 @@ public class RawExpressionDataVectorDaoImpl extends DesignElementDataVectorDaoIm
     public Collection<RawExpressionDataVector> find( ArrayDesign arrayDesign, QuantitationType quantitationType ) {
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "select dev from RawExpressionDataVector dev  inner join fetch dev.bioAssayDimension bd "
-                        + " inner join fetch dev.designElement de inner join fetch dev.quantitationType inner join de.arrayDesign ad where ad.id = :adid "
-                        + "and dev.quantitationType = :quantitationType " )
+                        "select dev from RawExpressionDataVector dev  inner join fetch dev.bioAssayDimension bd "
+                                + " inner join fetch dev.designElement de inner join fetch dev.quantitationType inner join de.arrayDesign ad where ad.id = :adid "
+                                + "and dev.quantitationType = :quantitationType " )
                 .setParameter( "quantitationType", quantitationType ).setParameter( "adid", arrayDesign.getId() )
                 .list();
 
@@ -89,22 +89,28 @@ public class RawExpressionDataVectorDaoImpl extends DesignElementDataVectorDaoIm
 
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery(
-                "select dev from RawExpressionDataVector as dev inner join dev.designElement as de "
-                        + " where de in (:des) and dev.quantitationType = :qt" )
+                        "select dev from RawExpressionDataVector as dev inner join dev.designElement as de "
+                                + " where de in (:des) and dev.quantitationType = :qt" )
                 .setParameterList( "des", designElements ).setParameter( "qt", quantitationType ).list();
     }
 
     @Override
     public void removeDataForCompositeSequence( final CompositeSequence compositeSequence ) {
         final String dedvRemovalQuery = "delete RawExpressionDataVector dedv where dedv.designElement = ?";
-        int deleted = this.getHibernateTemplate().bulkUpdate( dedvRemovalQuery, compositeSequence );
+        int deleted = this.getSessionFactory().getCurrentSession()
+                .createQuery( dedvRemovalQuery )
+                .setParameter( 0, compositeSequence )
+                .executeUpdate();
         AbstractDao.log.info( "Deleted: " + deleted );
     }
 
     @Override
     public void removeDataForQuantitationType( final QuantitationType quantitationType ) {
         final String dedvRemovalQuery = "delete from RawExpressionDataVector as dedv where dedv.quantitationType = ?";
-        int deleted = this.getHibernateTemplate().bulkUpdate( dedvRemovalQuery, quantitationType );
+        int deleted = this.getSessionFactory().getCurrentSession()
+                .createQuery( dedvRemovalQuery )
+                .setParameter( 0, quantitationType )
+                .executeUpdate();
         AbstractDao.log.info( "Deleted " + deleted + " data vector elements" );
     }
 
@@ -118,7 +124,7 @@ public class RawExpressionDataVectorDaoImpl extends DesignElementDataVectorDaoIm
         crit.createCriteria( "designElement" )
                 .add( Restrictions.eq( "name", designElementDataVector.getDesignElement().getName() ) )
                 .createCriteria( "arrayDesign" ).add( Restrictions
-                .eq( "name", designElementDataVector.getDesignElement().getArrayDesign().getName() ) );
+                        .eq( "name", designElementDataVector.getDesignElement().getArrayDesign().getName() ) );
 
         crit.createCriteria( "quantitationType" )
                 .add( Restrictions.eq( "name", designElementDataVector.getQuantitationType().getName() ) );
@@ -126,20 +132,7 @@ public class RawExpressionDataVectorDaoImpl extends DesignElementDataVectorDaoIm
         crit.createCriteria( "expressionExperiment" )
                 .add( Restrictions.eq( "name", designElementDataVector.getExpressionExperiment().getName() ) );
 
-        List<?> results = this.getHibernateTemplate().findByCriteria( crit );
-        Object result = null;
-        if ( results != null ) {
-            if ( results.size() > 1 ) {
-                throw new org.springframework.dao.InvalidDataAccessResourceUsageException(
-                        "More than one instance of '" + DesignElementDataVector.class.getName()
-                                + "' was found when executing query" );
-
-            } else if ( results.size() == 1 ) {
-                result = results.iterator().next();
-            }
-        }
-        return ( RawExpressionDataVector ) result;
-
+        return ( RawExpressionDataVector ) crit.getExecutableCriteria( getSessionFactory().getCurrentSession() ).uniqueResult();
     }
 
 }

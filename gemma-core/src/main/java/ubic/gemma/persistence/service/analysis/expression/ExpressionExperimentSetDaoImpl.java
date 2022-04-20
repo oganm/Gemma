@@ -137,9 +137,9 @@ public class ExpressionExperimentSetDaoImpl
 
     private Collection<Long> getExperimentIdsInSet( Long setId ) {
         //noinspection unchecked
-        return this.getHibernateTemplate().findByNamedParam(
-                "select i.id from ExpressionExperimentSet eset join eset.experiments i where eset.id = :id", "id",
-                setId );
+        return getSessionFactory().getCurrentSession().createQuery( "select i.id from ExpressionExperimentSet eset join eset.experiments i where eset.id = :id" )
+                .setParameter( "id", setId )
+                .list();
     }
 
     private void populateAnalysisInformation( Collection<ExpressionExperimentSetValueObject> vo ) {
@@ -153,8 +153,8 @@ public class ExpressionExperimentSetDaoImpl
         timer.start();
         //noinspection unchecked
         List<Object[]> withCoexp = this.getSessionFactory().getCurrentSession().createQuery(
-                "select e.id, count(an) from ExpressionExperimentSet e, CoexpressionAnalysis an join e.experiments ea "
-                        + "where an.experimentAnalyzed = ea and e.id in (:ids) group by e.id" )
+                        "select e.id, count(an) from ExpressionExperimentSet e, CoexpressionAnalysis an join e.experiments ea "
+                                + "where an.experimentAnalyzed = ea and e.id in (:ids) group by e.id" )
                 .setParameterList( "ids", idMap.keySet() ).list();
 
         for ( Object[] oa : withCoexp ) {
@@ -169,9 +169,9 @@ public class ExpressionExperimentSetDaoImpl
          */
         //noinspection unchecked
         List<Object[]> withDiffEx = this.getSessionFactory().getCurrentSession().createQuery(
-                "select e.id, count(distinct an.experimentAnalyzed) "
-                        + "from ExpressionExperimentSet e, DifferentialExpressionAnalysis an join e.experiments ea "
-                        + "where an.experimentAnalyzed = ea and e.id in (:ids) group by e.id" )
+                        "select e.id, count(distinct an.experimentAnalyzed) "
+                                + "from ExpressionExperimentSet e, DifferentialExpressionAnalysis an join e.experiments ea "
+                                + "where an.experimentAnalyzed = ea and e.id in (:ids) group by e.id" )
                 .setParameterList( "ids", idMap.keySet() ).list();
 
         for ( Object[] oa : withDiffEx ) {

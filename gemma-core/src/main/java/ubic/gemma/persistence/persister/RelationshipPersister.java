@@ -19,6 +19,7 @@
 package ubic.gemma.persistence.persister;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.model.analysis.expression.ExpressionExperimentSet;
@@ -47,6 +48,10 @@ public abstract class RelationshipPersister extends ExpressionPersister {
 
     @Autowired
     private ExpressionExperimentSetDao expressionExperimentSetDao;
+
+    public RelationshipPersister( SessionFactory sessionFactory ) {
+        super( sessionFactory );
+    }
 
     @Override
     @Transactional
