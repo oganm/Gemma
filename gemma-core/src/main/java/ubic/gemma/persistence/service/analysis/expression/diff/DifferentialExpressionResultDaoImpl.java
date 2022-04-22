@@ -534,7 +534,7 @@ public class DifferentialExpressionResultDaoImpl extends AbstractDao<Differentia
         List<?> qResult = getSessionFactory().getCurrentSession().createQuery( qs )
                 .setParameterList( "resultsSets", resultsSets )
                 .setParameter( "threshold", threshold )
-                .setMaxResults( limit )
+                .setMaxResults( limit != null ? limit : 0 )
                 .list();
 
         // If too few probes meet threshold, redo and just get top results.
