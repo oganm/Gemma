@@ -69,10 +69,6 @@ abstract public class GenomePersister extends CommonPersister {
     @Autowired
     private AnnotationAssociationDao annotationAssociationDao;
 
-    public GenomePersister( SessionFactory sessionFactory ) {
-        super( sessionFactory );
-    }
-
     @Override
     @Transactional
     public Object persist( Object entity ) {

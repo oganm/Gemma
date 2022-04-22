@@ -73,10 +73,6 @@ abstract public class ExpressionPersister extends ArrayDesignPersister {
     @Autowired
     private ExpressionExperimentPrePersistService expressionExperimentPrePersistService;
 
-    public ExpressionPersister( SessionFactory sessionFactory ) {
-        super( sessionFactory );
-    }
-
     @Override
     @Transactional
     public ExpressionExperiment persist( ExpressionExperiment ee, ArrayDesignsForExperimentCache cachedArrays ) {

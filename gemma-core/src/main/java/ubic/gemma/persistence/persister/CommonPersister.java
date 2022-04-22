@@ -79,10 +79,6 @@ abstract public class CommonPersister extends AbstractPersister {
     @Autowired
     private DatabaseEntryDao databaseEntryDao;
 
-    public CommonPersister( SessionFactory sessionFactory ) {
-        super( sessionFactory );
-    }
-
     @Override
     public Object persist( Object entity ) {
 

@@ -49,10 +49,6 @@ public abstract class RelationshipPersister extends ExpressionPersister {
     @Autowired
     private ExpressionExperimentSetDao expressionExperimentSetDao;
 
-    public RelationshipPersister( SessionFactory sessionFactory ) {
-        super( sessionFactory );
-    }
-
     @Override
     @Transactional
     public Object persist( Object entity ) {

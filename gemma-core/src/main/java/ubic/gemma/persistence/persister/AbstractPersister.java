@@ -27,6 +27,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.classic.Session;
 import org.hibernate.engine.ForeignKeys;
 import org.hibernate.engine.SessionImplementor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import ubic.gemma.persistence.util.EntityUtils;
 
@@ -51,11 +52,8 @@ public abstract class AbstractPersister implements Persister {
      */
     private static final int COLLECTION_INFO_FREQUENCY = 10;
 
-    private final SessionFactory sessionFactory;
-
-    public AbstractPersister( SessionFactory sessionFactory ) {
-        this.sessionFactory = sessionFactory;
-    }
+    @Autowired
+    private SessionFactory sessionFactory;
 
     protected SessionFactory getSessionFactory() {
         return sessionFactory;

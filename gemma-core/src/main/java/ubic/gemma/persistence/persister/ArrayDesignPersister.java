@@ -48,10 +48,6 @@ abstract public class ArrayDesignPersister extends GenomePersister {
     @Autowired
     private ArrayDesignDao arrayDesignDao;
 
-    public ArrayDesignPersister( SessionFactory sessionFactory ) {
-        super( sessionFactory );
-    }
-
     @Override
     @Transactional
     public Object persist( Object entity ) {
