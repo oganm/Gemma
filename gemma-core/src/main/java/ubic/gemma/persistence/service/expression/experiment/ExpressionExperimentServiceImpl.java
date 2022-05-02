@@ -68,6 +68,7 @@ import ubic.gemma.model.expression.arrayDesign.ArrayDesign;
 import ubic.gemma.model.expression.arrayDesign.TechnologyType;
 import ubic.gemma.model.expression.bioAssay.BioAssay;
 import ubic.gemma.model.expression.bioAssayData.BioAssayDimension;
+import ubic.gemma.model.expression.bioAssayData.ProcessedExpressionDataVector;
 import ubic.gemma.model.expression.bioAssayData.RawExpressionDataVector;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.experiment.BioAssaySet;
@@ -1132,6 +1133,18 @@ public class ExpressionExperimentServiceImpl
     @Override
     public Collection<ExpressionExperiment> getExperimentsLackingPublications() {
         return this.expressionExperimentDao.getExperimentsLackingPublications();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<RawExpressionDataVector, List<Gene>> loadRawExpressionDataVectorToGeneMap( ExpressionExperiment ee ) {
+        return expressionExperimentDao.loadRawExpressionVectorToGeneMap( ee );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<ProcessedExpressionDataVector, List<Gene>> loadProcessedExpressionDataVectorToGeneMap( ExpressionExperiment ee ) {
+        return expressionExperimentDao.loadProcessedExpressionVectorToGeneMap( ee );
     }
 
     /**

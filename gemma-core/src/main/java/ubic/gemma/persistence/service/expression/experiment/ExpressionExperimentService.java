@@ -31,6 +31,7 @@ import ubic.gemma.model.common.quantitationtype.QuantitationType;
 import ubic.gemma.model.expression.arrayDesign.ArrayDesign;
 import ubic.gemma.model.expression.bioAssay.BioAssay;
 import ubic.gemma.model.expression.bioAssayData.BioAssayDimension;
+import ubic.gemma.model.expression.bioAssayData.ProcessedExpressionDataVector;
 import ubic.gemma.model.expression.bioAssayData.RawExpressionDataVector;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.experiment.*;
@@ -49,8 +50,7 @@ import java.util.*;
  * @author kelsey
  */
 @SuppressWarnings("unused") // Possible external use
-public interface ExpressionExperimentService
-        extends FilteringVoEnabledService<ExpressionExperiment, ExpressionExperimentValueObject> {
+public interface ExpressionExperimentService extends FilteringVoEnabledService<ExpressionExperiment, ExpressionExperimentValueObject> {
 
     @Secured({ "GROUP_USER", "ACL_SECURABLE_EDIT" })
     ExperimentalFactor addFactor( ExpressionExperiment ee, ExperimentalFactor factor );
@@ -70,8 +70,7 @@ public interface ExpressionExperimentService
      * @return updated experiment.
      */
     @Secured({ "GROUP_USER", "ACL_SECURABLE_EDIT" })
-    ExpressionExperiment addRawVectors( ExpressionExperiment eeToUpdate,
-            Collection<RawExpressionDataVector> newVectors );
+    ExpressionExperiment addRawVectors( ExpressionExperiment eeToUpdate, Collection<RawExpressionDataVector> newVectors );
 
     @Secured({ "IS_AUTHENTICATED_ANONYMOUSLY", "AFTER_ACL_COLLECTION_READ" })
     List<ExpressionExperiment> browse( Integer start, Integer limit );
@@ -389,12 +388,10 @@ public interface ExpressionExperimentService
      * @return quantitation type
      */
     @Secured({ "IS_AUTHENTICATED_ANONYMOUSLY", "ACL_SECURABLE_READ" })
-    Collection<QuantitationType> getQuantitationTypes( ExpressionExperiment expressionExperiment,
-            ubic.gemma.model.expression.arrayDesign.ArrayDesign arrayDesign );
+    Collection<QuantitationType> getQuantitationTypes( ExpressionExperiment expressionExperiment, ubic.gemma.model.expression.arrayDesign.ArrayDesign arrayDesign );
 
     @Secured({ "IS_AUTHENTICATED_ANONYMOUSLY", "AFTER_ACL_MAP_READ" })
-    Map<ExpressionExperiment, Collection<AuditEvent>> getSampleRemovalEvents(
-            Collection<ExpressionExperiment> expressionExperiments );
+    Map<ExpressionExperiment, Collection<AuditEvent>> getSampleRemovalEvents( Collection<ExpressionExperiment> expressionExperiments );
 
     /**
      * @param expressionExperiment experiment
@@ -532,4 +529,8 @@ public interface ExpressionExperimentService
      */
     @Secured({ "IS_AUTHENTICATED_ANONYMOUSLY", "ACL_SECURABLE_READ" })
     Collection<ExpressionExperiment> getExperimentsLackingPublications();
+
+    Map<RawExpressionDataVector, List<Gene>> loadRawExpressionDataVectorToGeneMap( ExpressionExperiment ee );
+
+    Map<ProcessedExpressionDataVector, List<Gene>> loadProcessedExpressionDataVectorToGeneMap( ExpressionExperiment ee );
 }

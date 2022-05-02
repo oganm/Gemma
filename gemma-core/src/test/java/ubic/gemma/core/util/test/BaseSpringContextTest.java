@@ -19,6 +19,7 @@
 package ubic.gemma.core.util.test;
 
 import org.junit.Rule;
+import org.junit.rules.Timeout;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import gemma.gsec.AuthorityConstants;
@@ -69,6 +70,7 @@ import ubic.gemma.persistence.service.common.description.ExternalDatabaseService
 import ubic.gemma.persistence.service.genome.taxon.TaxonService;
 
 import javax.sql.DataSource;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -122,6 +124,9 @@ public abstract class BaseSpringContextTest extends AbstractJUnit4SpringContextT
      */
     @Rule
     public MockitoRule rule = MockitoJUnit.rule();
+
+    @Rule
+    public Timeout timeoutRule = Timeout.millis( 1000 );
 
     @Override
     final public void afterPropertiesSet() {

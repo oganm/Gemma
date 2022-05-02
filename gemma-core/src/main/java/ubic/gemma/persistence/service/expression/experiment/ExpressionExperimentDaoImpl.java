@@ -21,7 +21,6 @@ package ubic.gemma.persistence.service.expression.experiment;
 import gemma.gsec.acl.domain.AclObjectIdentity;
 import gemma.gsec.acl.domain.AclSid;
 import lombok.NonNull;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.hibernate.*;
@@ -43,6 +42,7 @@ import ubic.gemma.model.expression.arrayDesign.ArrayDesign;
 import ubic.gemma.model.expression.arrayDesign.ArrayDesignValueObject;
 import ubic.gemma.model.expression.bioAssay.BioAssay;
 import ubic.gemma.model.expression.bioAssayData.BioAssayDimension;
+import ubic.gemma.model.expression.bioAssayData.DesignElementDataVector;
 import ubic.gemma.model.expression.bioAssayData.ProcessedExpressionDataVector;
 import ubic.gemma.model.expression.bioAssayData.RawExpressionDataVector;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
@@ -629,6 +629,37 @@ public class ExpressionExperimentDaoImpl
     public Collection<ExpressionExperiment> getExperimentsLackingPublications() {
         //noinspection unchecked
         return this.getSessionFactory().getCurrentSession().createQuery( "select e from ExpressionExperiment e where e.primaryPublication = null and e.shortName like 'GSE%'" ).list();
+    }
+
+    @Override
+    public Map<RawExpressionDataVector, List<Gene>> loadRawExpressionVectorToGeneMap( ExpressionExperiment ee ) {
+        return loadDesignElementDataVectorToGeneMap( ee );
+    }
+
+    @Override
+    public Map<ProcessedExpressionDataVector, List<Gene>> loadProcessedExpressionVectorToGeneMap( ExpressionExperiment ee ) {
+        return loadDesignElementDataVectorToGeneMap( ee );
+    }
+
+    private <T extends DesignElementDataVector> Map<T, List<Gene>> loadDesignElementDataVectorToGeneMap( ExpressionExperiment ee ) {
+        //noinspection unchecked
+        List<Object[]> results = this.getSessionFactory().getCurrentSession()
+                .createSQLQuery( "select {redv.*}, {gene.*} from RAW_EXPRESSION_DATA_VECTOR redv "
+                        + " join GENE2CS g on redv.DESIGN_ELEMENT_FK = g.CS " // TODO: check g.AD
+                        + " join BIO_SEQUENCE gene on gene.ID = g.GENE "
+                        + " where redv.EXPRESSION_EXPERIMENT_FK = :ee" )
+                .setEntity( "redv", RawExpressionDataVector.class )
+                .setEntity( "gene", Gene.class )
+                .setParameter( "ee", ee )
+                .list();
+
+        return results.stream()
+                .collect( Collectors.groupingBy(
+                        l -> ( T ) l[0],
+                        Collectors.collectingAndThen( Collectors.toList(),
+                                elem -> elem.stream()
+                                        .map( l -> ( Gene ) l[1] )
+                                        .collect( Collectors.toList() ) ) ) );
     }
 
     @Override

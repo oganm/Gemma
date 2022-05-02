@@ -66,10 +66,10 @@ public interface ExpressionAnalysisResultSetDao extends AnalysisResultSetDao<Dif
 
     /**
      * Load a {@link DifferentialExpressionAnalysisResult} to {@link Gene} multi-map.
-     *
+     * <p>
      * This is much faster than navigating through the probe's alignments, transcripts and then genes as it uses the
      * internal GENE2CS table described in {@link TableMaintenanceUtil#updateGene2CsEntries()}.
-     *
+     * <p>
      * Note: Not all probes have associated genes, so you should use {@link Map#getOrDefault(Object, Object)} with an
      * empty collection to handle this case.
      */

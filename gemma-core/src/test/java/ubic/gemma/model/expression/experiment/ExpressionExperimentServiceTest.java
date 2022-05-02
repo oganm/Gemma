@@ -32,7 +32,9 @@ import ubic.gemma.model.expression.arrayDesign.ArrayDesign;
 import ubic.gemma.model.expression.bioAssayData.DesignElementDataVector;
 import ubic.gemma.model.expression.bioAssayData.RawExpressionDataVector;
 import ubic.gemma.model.expression.designElement.CompositeSequence;
+import ubic.gemma.model.genome.Gene;
 import ubic.gemma.model.genome.Taxon;
+import ubic.gemma.persistence.service.TableMaintenanceUtil;
 import ubic.gemma.persistence.service.common.description.CharacteristicDao;
 import ubic.gemma.persistence.service.expression.bioAssay.BioAssayDao;
 import ubic.gemma.persistence.service.expression.bioAssayData.RawExpressionDataVectorService;
@@ -286,4 +288,22 @@ public class ExpressionExperimentServiceTest extends BaseSpringContextTest {
         assertEquals( 1, list.size() );
     }
 
+    @Autowired
+    private TableMaintenanceUtil tableMaintenanceUtil;
+
+    /**
+     * This is a pre-requisite because this table is generated periodically, and we need it now for the following tests.
+     */
+    @Before
+    public void prepareGene2CsEntries() {
+        tableMaintenanceUtil.updateGene2CsEntries();
+    }
+
+    @Test
+    public void testLoadGeneMap() {
+        Map<RawExpressionDataVector, List<Gene>> result = expressionExperimentService.loadRawExpressionDataVectorToGeneMap( ee );
+        // make sure that all vectors are mapped to genes
+        assertThat( result )
+                .containsOnlyKeys( ee.getRawExpressionDataVectors() );
+    }
 }

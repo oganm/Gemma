@@ -1,6 +1,7 @@
 package ubic.gemma.persistence.service.expression.experiment;
 
 import org.springframework.beans.factory.InitializingBean;
+import ubic.gemma.model.analysis.expression.diff.ExpressionAnalysisResultSet;
 import ubic.gemma.model.common.auditAndSecurity.AuditEvent;
 import ubic.gemma.model.common.description.AnnotationValueObject;
 import ubic.gemma.model.common.description.DatabaseEntry;
@@ -8,6 +9,8 @@ import ubic.gemma.model.common.quantitationtype.QuantitationType;
 import ubic.gemma.model.expression.arrayDesign.ArrayDesign;
 import ubic.gemma.model.expression.bioAssay.BioAssay;
 import ubic.gemma.model.expression.bioAssayData.BioAssayDimension;
+import ubic.gemma.model.expression.bioAssayData.ProcessedExpressionDataVector;
+import ubic.gemma.model.expression.bioAssayData.RawExpressionDataVector;
 import ubic.gemma.model.expression.biomaterial.BioMaterial;
 import ubic.gemma.model.expression.experiment.*;
 import ubic.gemma.model.genome.Gene;
@@ -15,7 +18,6 @@ import ubic.gemma.model.genome.Taxon;
 import ubic.gemma.persistence.service.FilteringVoEnabledDao;
 import ubic.gemma.persistence.service.common.auditAndSecurity.curation.CuratableDao;
 import ubic.gemma.persistence.util.Filters;
-import ubic.gemma.persistence.util.ObjectFilter;
 import ubic.gemma.persistence.util.Slice;
 import ubic.gemma.persistence.util.Sort;
 
@@ -168,4 +170,14 @@ public interface ExpressionExperimentDao
     Collection<? extends AnnotationValueObject> getAnnotationsByFactorvalues( Long eeId );
 
     Collection<ExpressionExperiment> getExperimentsLackingPublications();
+
+    /**
+     * Load the relevant subset of the probe-to-gene mapping for this expression experiment.
+     *
+     * @see ubic.gemma.persistence.service.analysis.expression.diff.ExpressionAnalysisResultSetDao#loadResultToGenesMap(ExpressionAnalysisResultSet)
+     * @return
+     */
+    Map<RawExpressionDataVector, List<Gene>> loadRawExpressionVectorToGeneMap( ExpressionExperiment ee );
+
+    Map<ProcessedExpressionDataVector, List<Gene>> loadProcessedExpressionVectorToGeneMap( ExpressionExperiment ee );
 }
